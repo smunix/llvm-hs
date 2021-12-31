@@ -1,26 +1,26 @@
-{-# LANGUAGE
-  CPP, RankNTypes
-  #-}
-module Control.Monad.Trans.AnyCont where
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE RankNTypes #-}
 
-import LLVM.Prelude
+module Control.Monad.Trans.AnyCont where
 
 import Control.Monad.Catch
 import Control.Monad.Cont as Cont
 import Control.Monad.Fail as Fail
+import LLVM.Prelude
 
-newtype AnyContT m a = AnyContT { unAnyContT :: forall r . ContT r m a }
+newtype AnyContT m a = AnyContT {unAnyContT :: forall r. ContT r m a}
 
 instance Functor (AnyContT m) where
-  fmap f p = AnyContT $ fmap f . unAnyContT $ p
+  fmap f (AnyContT p) = AnyContT $ fmap f p
 
 instance Applicative (AnyContT m) where
   pure a = AnyContT $ pure a
   f <*> v = AnyContT $ unAnyContT f <*> unAnyContT v
 
 instance Monad m => Monad (AnyContT m) where
-  AnyContT f >>= k = AnyContT $ f >>= unAnyContT . k
+  AnyContT f >>= k = AnyContT $ f >>= (\(AnyContT p) -> p) . k
   return a = AnyContT $ return a
+
 #if !(MIN_VERSION_base(4,13,0))
   fail s = AnyContT (ContT (\_ -> Cont.fail s))
 #endif
@@ -37,15 +37,14 @@ instance MonadTrans AnyContT where
 instance MonadThrow m => MonadThrow (AnyContT m) where
   throwM = lift . throwM
 
-runAnyContT :: AnyContT m a -> (forall r . (a -> m r) -> m r)
-runAnyContT = runContT . unAnyContT
+runAnyContT :: AnyContT m a -> (a -> m r) -> m r
+runAnyContT (AnyContT p) = runContT p
 
-anyContT :: (forall r . (a -> m r) -> m r) -> AnyContT m a
+anyContT :: (forall r. (a -> m r) -> m r) -> AnyContT m a
 anyContT f = AnyContT (ContT f)
 
-withAnyContT :: (forall r . (b -> m r) -> (a -> m r)) -> AnyContT m a -> AnyContT m b
-withAnyContT f m = anyContT $ runAnyContT m . f
+withAnyContT :: (forall r. (b -> m r) -> (a -> m r)) -> AnyContT m a -> AnyContT m b
+withAnyContT f (AnyContT m) = anyContT $ runContT m . f
 
-mapAnyContT :: (forall r . m r -> m r) -> AnyContT m a -> AnyContT m a
-mapAnyContT f m = anyContT $ f . runAnyContT m
-
+mapAnyContT :: (forall r. m r -> m r) -> AnyContT m a -> AnyContT m a
+mapAnyContT f (AnyContT m) = anyContT $ f . runContT m

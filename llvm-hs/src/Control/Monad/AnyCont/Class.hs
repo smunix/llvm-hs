@@ -1,31 +1,28 @@
-{-# LANGUAGE
-  RankNTypes,
-  MultiParamTypeClasses,
-  UndecidableInstances
-  #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE UndecidableInstances #-}
+
 module Control.Monad.AnyCont.Class where
 
-import Prelude
-
-import Control.Monad.Trans.Class
-import Control.Monad.Trans.AnyCont (AnyContT)
+import Control.Monad.Cont (runContT)
+import Control.Monad.Trans.AnyCont (AnyContT (..))
 import qualified Control.Monad.Trans.AnyCont as AnyCont
+import Control.Monad.Trans.Class
 import Control.Monad.Trans.Except as Except
 import Control.Monad.Trans.State as State
+import Prelude
 
 class ScopeAnyCont m where
   scopeAnyCont :: m a -> m a
 
 class MonadAnyCont b m where
-  anyContToM :: (forall r . (a -> b r) -> b r) -> m a
-
+  anyContToM :: (forall r. (a -> b r) -> b r) -> m a
 
 instance MonadTransAnyCont b m => MonadAnyCont b (AnyContT m) where
   anyContToM c = AnyCont.anyContT (liftAnyCont c)
 
 instance Monad m => ScopeAnyCont (AnyContT m) where
-  scopeAnyCont = lift . flip AnyCont.runAnyContT return
-
+  scopeAnyCont (AnyContT k) = lift $ runContT k return
 
 instance (Monad m, MonadAnyCont b m) => MonadAnyCont b (StateT s m) where
   anyContToM x = lift $ anyContToM x
@@ -33,16 +30,14 @@ instance (Monad m, MonadAnyCont b m) => MonadAnyCont b (StateT s m) where
 instance ScopeAnyCont m => ScopeAnyCont (StateT s m) where
   scopeAnyCont = StateT . (scopeAnyCont .) . runStateT
 
-
 instance (Monad m, MonadAnyCont b m) => MonadAnyCont b (ExceptT e m) where
   anyContToM x = lift $ anyContToM x
-
 
 instance ScopeAnyCont m => ScopeAnyCont (ExceptT e m) where
   scopeAnyCont = mapExceptT scopeAnyCont
 
 class MonadTransAnyCont b m where
-  liftAnyCont :: (forall r . (a -> b r) -> b r) -> (forall r . (a -> m r) -> m r)
+  liftAnyCont :: (forall r. (a -> b r) -> b r) -> (forall r. (a -> m r) -> m r)
 
 instance MonadTransAnyCont b b where
   liftAnyCont c = c
