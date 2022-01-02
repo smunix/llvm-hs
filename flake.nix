@@ -30,24 +30,28 @@
           with haskell.lib;
           with haskell.packages."ghc${ghc}".extend (final: _: rec { }); {
             "${ghc}" = rec {
-              llvm-hs-pure = overrideCabal (callCabal2nix "llvm-hs-pure"
-                (with nf.lib; filter { root = ./llvm-hs-pure; }) { })
+              llvm-hs-pure = overrideCabal (disableLibraryProfiling
+                (callCabal2nix "llvm-hs-pure"
+                  (with nf.lib; filter { root = ./llvm-hs-pure; }) { }))
                 (o: { version = "${o.version}-${version ghc}"; });
-              llvm-hs = addBuildDepends (overrideCabal (callCabal2nix "llvm-hs"
-                (with nf.lib; filter { root = ./llvm-hs; }) {
-                  inherit llvm-hs-pure;
-                  llvm-config = llvmPackages_9.llvm;
-                }) (o: { version = "${o.version}-${version ghc}"; }))
+              llvm-hs = addBuildDepends (overrideCabal (disableLibraryProfiling
+                (callCabal2nix "llvm-hs"
+                  (with nf.lib; filter { root = ./llvm-hs; }) {
+                    inherit llvm-hs-pure;
+                    llvm-config = llvmPackages_9.llvm;
+                  })) (o: { version = "${o.version}-${version ghc}"; }))
                 [ llvmPackages_9.llvm ];
               llvm-hs-pretty = dontCheck (overrideCabal (addBuildTools
-                (callCabal2nix "llvm-hs-pretty" "${lhp}" {
-                  inherit llvm-hs llvm-hs-pure;
-                }) [ hpack ])
+                (disableLibraryProfiling
+                  (callCabal2nix "llvm-hs-pretty" "${lhp}" {
+                    inherit llvm-hs llvm-hs-pure;
+                  })) [ hpack ])
                 (o: { version = "${o.version}-${version ghc}"; }));
               llvm-hs-combinators = dontCheck (overrideCabal (addBuildTools
-                (callCabal2nix "llvm-hs-combinators" "${lhc}" {
-                  inherit llvm-hs-pure;
-                }) [ hpack ])
+                (disableLibraryProfiling
+                  (callCabal2nix "llvm-hs-combinators" "${lhc}" {
+                    inherit llvm-hs-pure;
+                  })) [ hpack ])
                 (o: { version = "${o.version}-${version ghc}"; }));
             };
           };
