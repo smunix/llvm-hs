@@ -9,7 +9,6 @@
   ScopedTypeVariables,
   TemplateHaskell
   #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 module LLVM.Internal.Operand where
 
 import LLVM.Prelude
@@ -43,76 +42,8 @@ import LLVM.Internal.Metadata (getByteStringFromFFI)
 
 import qualified LLVM.AST as A hiding (GlobalVariable, Module, PointerType, type')
 import qualified LLVM.AST.Operand as A
-import qualified LLVM.AST.Constant as A (Constant(Int, integerBits, integerValue))
 
 import LLVM.Internal.FFI.LLVMCTypes (mdSubclassIdP)
-
-genCodingInstance [t|A.DebugEmissionKind|] ''FFI.DebugEmissionKind
-  [ (FFI.NoDebug, A.NoDebug)
-  , (FFI.FullDebug, A.FullDebug)
-  , (FFI.LineTablesOnly, A.LineTablesOnly)
-  ]
-
-genCodingInstance [t|A.DebugNameTableKind|] ''FFI.DebugNameTableKind
-  [ (FFI.NameTableKindDefault, A.NameTableKindDefault)
-  , (FFI.NameTableKindGNU, A.NameTableKindGNU)
-  , (FFI.NameTableKindNone, A.NameTableKindNone)
-  ]
-
-genCodingInstance [t|A.Encoding|] ''FFI.Encoding
-  [ (FFI.DwAtE_address, A.AddressEncoding)
-  , (FFI.DwAtE_boolean, A.BooleanEncoding)
-  , (FFI.DwAtE_float, A.FloatEncoding)
-  , (FFI.DwAtE_signed, A.SignedEncoding)
-  , (FFI.DwAtE_signed_char, A.SignedCharEncoding)
-  , (FFI.DwAtE_unsigned, A.UnsignedEncoding)
-  , (FFI.DwAtE_unsigned_char, A.UnsignedCharEncoding)
-  , (FFI.DwAtE_UTF, A.UTFEncoding)
-  ]
-
-genCodingInstance [t|A.ChecksumKind|] ''FFI.ChecksumKind
-  [ (FFI.ChecksumKind 1, A.MD5)
-  , (FFI.ChecksumKind 2, A.SHA1)
-  ]
-
-genCodingInstance [t|A.BasicTypeTag|] ''FFI.DwTag
-  [ (FFI.DwTag_base_type, A.BaseType)
-  , (FFI.DwTag_unspecified_type, A.UnspecifiedType)
-  ]
-
-genCodingInstance [t|A.DerivedTypeTag|] ''FFI.DwTag
-  [ (FFI.DwTag_typedef, A.Typedef)
-  , (FFI.DwTag_pointer_type, A.PointerType)
-  , (FFI.DwTag_ptr_to_member_type, A.PtrToMemberType)
-  , (FFI.DwTag_reference_type, A.ReferenceType)
-  , (FFI.DwTag_rvalue_reference_type, A.RValueReferenceType)
-  , (FFI.DwTag_const_type, A.ConstType)
-  , (FFI.DwTag_volatile_type, A.VolatileType)
-  , (FFI.DwTag_restrict_type, A.RestrictType)
-  , (FFI.DwTag_atomic_type, A.AtomicType)
-  , (FFI.DwTag_member, A.Member)
-  , (FFI.DwTag_inheritance, A.Inheritance)
-  , (FFI.DwTag_friend, A.Friend)
-  ]
-
-genCodingInstance [t|A.TemplateValueParameterTag|] ''FFI.DwTag
-  [ (FFI.DwTag_template_value_parameter, A.TemplateValueParameter)
-  , (FFI.DwTag_GNU_template_template_param, A.GNUTemplateTemplateParam)
-  , (FFI.DwTag_GNU_template_parameter_pack, A.GNUTemplateParameterPack)
-  ]
-
-genCodingInstance [t|A.Virtuality|] ''FFI.DwVirtuality
-  [ (FFI.DwVirtuality_none, A.NoVirtuality)
-  , (FFI.DwVirtuality_virtual, A.Virtual)
-  , (FFI.DwVirtuality_pure_virtual, A.PureVirtual)
-  ]
-
-genCodingInstance [t|A.DIMacroInfo|] ''FFI.Macinfo [ (FFI.DW_Macinfo_Define, A.Define), (FFI.DW_Macinfo_Undef, A.Undef) ]
-
-genCodingInstance [t|A.ImportedEntityTag|] ''FFI.DwTag
-  [ (FFI.DwTag_imported_module, A.ImportedModule)
-  , (FFI.DwTag_imported_declaration, A.ImportedDeclaration)
-  ]
 
 instance EncodeM EncodeAST ShortByteString (Ptr FFI.MDString) where
   encodeM s = do
@@ -130,7 +61,7 @@ instance Applicative m => EncodeM m [A.DIFlag] FFI.DIFlags where
           A.Accessibility A.Public -> 3
           A.FwdDecl -> 1 `shiftL` 2
           A.AppleBlock -> 1 `shiftL` 3
-          A.ReservedBit4 -> 1 `shiftL` 4
+          A.BlockByrefStruct -> 1 `shiftL` 4
           A.VirtualFlag -> 1 `shiftL` 5
           A.Artificial -> 1 `shiftL` 6
           A.Explicit -> 1 `shiftL` 7
@@ -147,6 +78,7 @@ instance Applicative m => EncodeM m [A.DIFlag] FFI.DIFlags where
           A.IntroducedVirtual -> 1 `shiftL` 18
           A.BitField -> 1 `shiftL` 19
           A.NoReturn -> 1 `shiftL` 20
+          A.ArgumentNotModified -> 1 `shiftL` 21
           A.TypePassByValue -> 1 `shiftL` 22
           A.TypePassByReference -> 1 `shiftL` 23
           A.EnumClass -> 1 `shiftL` 24
@@ -181,6 +113,7 @@ instance Applicative m => DecodeM m [A.DIFlag] FFI.DIFlags where
       flags =
         [ A.FwdDecl
         , A.AppleBlock
+        , A.BlockByrefStruct
         , A.VirtualFlag
         , A.Artificial
         , A.Explicit
@@ -194,6 +127,7 @@ instance Applicative m => DecodeM m [A.DIFlag] FFI.DIFlags where
         , A.IntroducedVirtual
         , A.BitField
         , A.NoReturn
+        , A.ArgumentNotModified
         , A.TypePassByValue
         , A.TypePassByReference
         , A.EnumClass
@@ -227,12 +161,10 @@ instance DecodeM DecodeAST A.Metadata (Ptr FFI.Metadata) where
         n <- liftIO $ FFI.isAMDNode md
         if n /= nullPtr
           then A.MDNode <$> decodeM n
-          else do
-            v <- liftIO $ FFI.isAMDValue md
-            if v /= nullPtr
-              then A.MDValue <$> decodeM v
-              else do
-                throwM (DecodeException "Metadata was not one of [MDString, MDValue, MDNode]")
+          else do v <- liftIO $ FFI.isAMDValue md
+                  if v /= nullPtr
+                    then A.MDValue <$> decodeM v
+                    else throwM (DecodeException "Metadata was not one of [MDString, MDValue, MDNode]")
 
 instance DecodeM DecodeAST (Either String A.DINode) (Ptr FFI.DINode) where
   decodeM diN = do
@@ -275,70 +207,26 @@ instance DecodeM DecodeAST (Either String A.DINode) (Ptr FFI.DINode) where
 
       _ -> throwM (DecodeException ("Unknown subclass id for DINode: " <> show sId))
 
-instance EncodeM EncodeAST A.DICount (Ptr FFI.Metadata) where
-  encodeM count = do
-    case count of
-      A.DICountConstant i -> do
-        let constant = A.MDValue (A.ConstantOperand (A.Int { A.integerBits = 64, A.integerValue = toInteger i }))
-        encodeM constant
-      A.DICountVariable v -> do
-        encodeM (A.MDNode $ A.DINode . A.DIVariable <$> v)
-
-instance EncodeM EncodeAST A.DIBound (Ptr FFI.Metadata) where
-  encodeM bound = do
-    case bound of
-      A.DIBoundConstant i -> do
-        let constant = A.MDValue (A.ConstantOperand (A.Int { A.integerBits = 64, A.integerValue = toInteger i }))
-        encodeM constant
-      A.DIBoundVariable v -> do
-        encodeM (A.MDNode (A.DINode . A.DIVariable <$> v))
-      A.DIBoundExpression e -> do
-        encodeM (A.MDNode (A.DIExpression <$> e))
-
-instance DecodeM DecodeAST A.DICount (Ptr FFI.Metadata) where
-  decodeM m = do
-    c <- liftIO $ FFI.isAMDValue m
-    if c /= nullPtr
-    then do
-      (A.ConstantOperand A.Int { A.integerValue = i }) <- decodeM c
-      pure (A.DICountConstant (fromInteger i))
-    else do
-      v <- decodeM =<< liftIO (FFI.isADIVariable m)
-      pure (A.DICountVariable v)
-
-instance DecodeM DecodeAST A.DIBound (Ptr FFI.Metadata) where
-  decodeM m = do
-    c <- liftIO $ FFI.isAMDValue m
-    if c /= nullPtr
-    then do
-      (A.ConstantOperand A.Int { A.integerValue = i }) <- decodeM c
-      pure (A.DIBoundConstant (fromInteger i))
-    else do
-      v <- liftIO (FFI.isADIVariable m)
-      if v /= nullPtr
-        then do
-          v' <- decodeM =<< pure v
-          pure (A.DIBoundVariable v')
-        else do
-          e <- decodeM =<< liftIO (FFI.isADIExpression m)
-          pure (A.DIBoundExpression e)
-
 instance EncodeM EncodeAST A.DISubrange (Ptr FFI.DISubrange) where
   encodeM (A.Subrange {..}) = do
     Context c <- gets encodeStateContext
-    count' <- encodeM count
-    lowerBound' <- encodeM lowerBound
-    upperBound' <- encodeM upperBound
-    stride' <- encodeM stride
-    liftIO (FFI.getDISubrangeVariableFields c count' lowerBound' upperBound' stride')
+    case count of
+      A.DICountConstant i -> liftIO (FFI.getDISubrangeConstantCount c i lowerBound)
+      A.DICountVariable v -> do
+        v' <- encodeM v
+        liftIO (FFI.getDISubrangeVariableCount c v' lowerBound)
 
 instance DecodeM DecodeAST A.DISubrange (Ptr FFI.DISubrange) where
   decodeM r = do
-    count <- decodeM =<< liftIO (FFI.getDISubrangeCount r)
-    lowerBound <- decodeM =<< liftIO (FFI.getDISubrangeLowerBound r)
-    upperBound <- decodeM =<< liftIO (FFI.getDISubrangeUpperBound r)
-    stride <- decodeM =<< liftIO (FFI.getDISubrangeStride r)
-    pure (A.Subrange count lowerBound upperBound stride)
+    lowerBound <- liftIO (FFI.getDISubrangeLowerBound r)
+    hasConstantCount <- decodeM =<< liftIO (FFI.getDISubrangeHasConstantCount r)
+    if hasConstantCount
+      then do
+        count <- liftIO (FFI.getDISubrangeCountConstant r)
+        pure (A.Subrange (A.DICountConstant count) lowerBound)
+      else do
+        count <- decodeM =<< liftIO (FFI.getDISubrangeCountVariable r)
+        pure (A.Subrange (A.DICountVariable count) lowerBound)
 
 instance EncodeM EncodeAST A.DIEnumerator (Ptr FFI.DIEnumerator) where
   encodeM (A.Enumerator {..}) = do
@@ -417,15 +305,13 @@ instance DecodeM DecodeAST A.DIModule (Ptr FFI.DIModule) where
     let m = castPtr p :: Ptr FFI.DIModule
     configurationMacros <- decodeM =<< liftIO (FFI.getDIModuleConfigurationMacros m)
     includePath <- decodeM =<< liftIO (FFI.getDIModuleIncludePath m)
-    apiNotesFile <- decodeM =<< liftIO (FFI.getDIModuleAPINotesFile m)
-    lineNo <- liftIO (FFI.getDIModuleLineNo m)
+    isysRoot <- decodeM =<< liftIO (FFI.getDIModuleISysRoot m)
     pure A.Module
       { A.scope = scope
       , A.name = name
       , A.configurationMacros = configurationMacros
       , A.includePath = includePath
-      , A.apiNotesFile = apiNotesFile
-      , A.lineNo = lineNo
+      , A.isysRoot = isysRoot
       }
 
 instance EncodeM EncodeAST A.DIModule (Ptr FFI.DIModule) where
@@ -434,9 +320,21 @@ instance EncodeM EncodeAST A.DIModule (Ptr FFI.DIModule) where
     name <- encodeM name
     configurationMacros <- encodeM configurationMacros
     includePath <- encodeM includePath
-    apiNotesFile <- encodeM apiNotesFile
+    isysRoot <- encodeM isysRoot
     Context c <- gets encodeStateContext
-    liftIO (FFI.getDIModule c scope name configurationMacros includePath apiNotesFile lineNo)
+    liftIO (FFI.getDIModule c scope name configurationMacros includePath isysRoot)
+
+genCodingInstance [t|A.DebugEmissionKind|] ''FFI.DebugEmissionKind
+  [ (FFI.NoDebug, A.NoDebug)
+  , (FFI.FullDebug, A.FullDebug)
+  , (FFI.LineTablesOnly, A.LineTablesOnly)
+  ]
+
+genCodingInstance [t|A.DebugNameTableKind|] ''FFI.DebugNameTableKind
+  [ (FFI.NameTableKindDefault, A.NameTableKindDefault)
+  , (FFI.NameTableKindGNU, A.NameTableKindGNU)
+  , (FFI.NameTableKindNone, A.NameTableKindNone)
+  ]
 
 instance DecodeM DecodeAST A.DICompileUnit (Ptr FFI.DICompileUnit) where
   decodeM p = do
@@ -463,7 +361,7 @@ instance DecodeM DecodeAST A.DICompileUnit (Ptr FFI.DICompileUnit) where
     entities <- decodeM =<< liftIO (FFI.getDICompileUnitImportedEntities p)
     macros <- decodeM =<< liftIO (FFI.getDICompileUnitMacros p)
     nameTableKind <- decodeM =<< liftIO (FFI.getDICompileUnitNameTableKind p)
-    rangesBaseAddress <- decodeM =<< liftIO (FFI.getDICompileUnitRangesBaseAddress p)
+    debugBaseAddress <- decodeM =<< liftIO (FFI.getDICompileUnitRangesBaseAddress p)
     pure A.CompileUnit
       { A.language = language
       , A.file = file
@@ -482,7 +380,7 @@ instance DecodeM DecodeAST A.DICompileUnit (Ptr FFI.DICompileUnit) where
       , A.splitDebugInlining = splitDebugInlining
       , A.debugInfoForProfiling = debugInfoForProfiling
       , A.nameTableKind = nameTableKind
-      , A.rangesBaseAddress = rangesBaseAddress
+      , A.debugBaseAddress = debugBaseAddress
       }
 
 instance EncodeM EncodeAST A.DICompileUnit (Ptr FFI.DICompileUnit) where
@@ -504,14 +402,14 @@ instance EncodeM EncodeAST A.DICompileUnit (Ptr FFI.DICompileUnit) where
     splitDebugInlining <- encodeM splitDebugInlining
     debugInfoForProfiling <- encodeM debugInfoForProfiling
     nameTableKind <- encodeM nameTableKind
-    rangesBaseAddress <- encodeM rangesBaseAddress
+    debugBaseAddress <- encodeM debugBaseAddress
     Context c <- gets encodeStateContext
     liftIO $ FFI.getDICompileUnit
       c
       language file producer optimized flags
       runtimeVersion debugFileName emissionKind enums retainedTypes
       globals imports macros dwoid splitDebugInlining
-      debugInfoForProfiling nameTableKind rangesBaseAddress
+      debugInfoForProfiling nameTableKind debugBaseAddress
 
 instance EncodeM EncodeAST A.DIScope (Ptr FFI.DIScope) where
   encodeM (A.DIFile f) = FFI.upCast <$> (encodeM f :: EncodeAST (Ptr FFI.DIFile))
@@ -551,6 +449,27 @@ instance EncodeM EncodeAST (Maybe A.Encoding) FFI.Encoding where
 instance DecodeM DecodeAST (Maybe A.Encoding) FFI.Encoding where
   decodeM (FFI.Encoding 0) = pure Nothing
   decodeM e = Just <$> decodeM e
+
+genCodingInstance [t|A.Encoding|] ''FFI.Encoding
+  [ (FFI.DwAtE_address, A.AddressEncoding)
+  , (FFI.DwAtE_boolean, A.BooleanEncoding)
+  , (FFI.DwAtE_float, A.FloatEncoding)
+  , (FFI.DwAtE_signed, A.SignedEncoding)
+  , (FFI.DwAtE_signed_char, A.SignedCharEncoding)
+  , (FFI.DwAtE_unsigned, A.UnsignedEncoding)
+  , (FFI.DwAtE_unsigned_char, A.UnsignedCharEncoding)
+  , (FFI.DwAtE_UTF, A.UTFEncoding)
+  ]
+
+genCodingInstance [t|A.ChecksumKind|] ''FFI.ChecksumKind
+  [ (FFI.ChecksumKind 1, A.MD5)
+  , (FFI.ChecksumKind 2, A.SHA1)
+  ]
+
+genCodingInstance [t|A.BasicTypeTag|] ''FFI.DwTag
+  [ (FFI.DwTag_base_type, A.BaseType)
+  , (FFI.DwTag_unspecified_type, A.UnspecifiedType)
+  ]
 
 instance EncodeM EncodeAST A.DIType (Ptr FFI.DIType) where
   encodeM (A.DIBasicType t) = FFI.upCast <$> (encodeM t :: EncodeAST (Ptr FFI.DIBasicType))
@@ -745,6 +664,21 @@ instance DecodeM DecodeAST A.DIDerivedType (Ptr FFI.DIDerivedType) where
       , A.flags = flags
       }
 
+genCodingInstance [t|A.DerivedTypeTag|] ''FFI.DwTag
+  [ (FFI.DwTag_typedef, A.Typedef)
+  , (FFI.DwTag_pointer_type, A.PointerType)
+  , (FFI.DwTag_ptr_to_member_type, A.PtrToMemberType)
+  , (FFI.DwTag_reference_type, A.ReferenceType)
+  , (FFI.DwTag_rvalue_reference_type, A.RValueReferenceType)
+  , (FFI.DwTag_const_type, A.ConstType)
+  , (FFI.DwTag_volatile_type, A.VolatileType)
+  , (FFI.DwTag_restrict_type, A.RestrictType)
+  , (FFI.DwTag_atomic_type, A.AtomicType)
+  , (FFI.DwTag_member, A.Member)
+  , (FFI.DwTag_inheritance, A.Inheritance)
+  , (FFI.DwTag_friend, A.Friend)
+  ]
+
 instance EncodeM EncodeAST A.DIVariable (Ptr FFI.DIVariable) where
   encodeM (A.DIGlobalVariable v) = do
     ptr <- encodeM v
@@ -835,6 +769,12 @@ instance EncodeM EncodeAST A.DILocalVariable (Ptr FFI.DILocalVariable) where
     Context c <- gets encodeStateContext
     FFI.upCast <$> liftIO (FFI.getDILocalVariable c scope name file line type' arg flags alignInBits)
 
+genCodingInstance [t|A.TemplateValueParameterTag|] ''FFI.DwTag
+  [ (FFI.DwTag_template_value_parameter, A.TemplateValueParameter)
+  , (FFI.DwTag_GNU_template_template_param, A.GNUTemplateTemplateParam)
+  , (FFI.DwTag_GNU_template_parameter_pack, A.GNUTemplateParameterPack)
+  ]
+
 instance EncodeM EncodeAST A.DITemplateParameter (Ptr FFI.DITemplateParameter) where
   encodeM p = do
     name' <- encodeM (A.name (p :: A.DITemplateParameter)) :: EncodeAST (Ptr FFI.MDString)
@@ -846,7 +786,7 @@ instance EncodeM EncodeAST A.DITemplateParameter (Ptr FFI.DITemplateParameter) w
       A.DITemplateValueParameter {..} -> do
         tag <- encodeM tag
         value <- encodeM value
-        FFI.upCast <$> liftIO (FFI.getDITemplateValueParameter c name' ty tag True value)
+        FFI.upCast <$> liftIO (FFI.getDITemplateValueParameter c name' ty tag value)
 
 instance DecodeM DecodeAST A.DITemplateParameter (Ptr FFI.DITemplateParameter) where
   decodeM p = do
@@ -861,6 +801,12 @@ instance DecodeM DecodeAST A.DITemplateParameter (Ptr FFI.DITemplateParameter) w
         tag <- decodeM =<< liftIO (FFI.getTag (FFI.upCast p))
         pure (A.DITemplateValueParameter name ty value tag)
       _ -> throwM (DecodeException ("Unknown subclass id for DITemplateParameter: " <> show sId))
+
+genCodingInstance [t|A.Virtuality|] ''FFI.DwVirtuality
+  [ (FFI.DwVirtuality_none, A.NoVirtuality)
+  , (FFI.DwVirtuality_virtual, A.Virtual)
+  , (FFI.DwVirtuality_pure_virtual, A.PureVirtual)
+  ]
 
 instance DecodeM DecodeAST A.DISubprogram (Ptr FFI.DISubprogram) where
   decodeM p = do
@@ -993,10 +939,7 @@ instance DecodeM DecodeAST A.CallableOperand (Ptr FFI.Value) where
      else Right <$> decodeM v
 
 instance EncodeM EncodeAST A.Operand (Ptr FFI.Value) where
-  encodeM (A.ConstantOperand c) = do
-    c' <- (encodeM :: A.Constant -> EncodeAST (Ptr FFI.Constant)) c
-    let v = (FFI.upCast :: Ptr FFI.Constant -> Ptr FFI.Value) c'
-    return v
+  encodeM (A.ConstantOperand c) = (FFI.upCast :: Ptr FFI.Constant -> Ptr FFI.Value) <$> encodeM c
   encodeM (A.LocalReference t n) = do
     lv <- refer encodeStateLocals n $ do
       lv <- do
@@ -1020,8 +963,7 @@ instance EncodeM EncodeAST A.Metadata (Ptr FFI.Metadata) where
   encodeM (A.MDNode mdn) = (FFI.upCast :: Ptr FFI.MDNode -> Ptr FFI.Metadata) <$> encodeM mdn
   encodeM (A.MDValue v) = do
      v <- encodeM v
-     mdVal <- liftIO $ FFI.mdValue v
-     return $ FFI.upCast mdVal
+     FFI.upCast <$> liftIO (FFI.mdValue v)
 
 instance EncodeM EncodeAST A.CallableOperand (Ptr FFI.Value) where
   encodeM (Right o) = encodeM o
@@ -1064,10 +1006,8 @@ instance (MonadIO m, MonadState EncodeState m, MonadAnyCont IO m, EncodeM m a (P
 instance (MonadIO m, MonadAnyCont IO m, DecodeM m a (Ptr a')) => DecodeM m [a] (FFI.TupleArray a') where
   decodeM (FFI.TupleArray p)
     | p == nullPtr = pure []
-    | otherwise = do
-      decodeArray FFI.getMDNodeNumOperands getOperand (FFI.upCast p)
-    where
-      getOperand md i = (castPtr <$> FFI.getMDNodeOperand md i) :: IO (Ptr a')
+    | otherwise = decodeArray FFI.getMDNodeNumOperands getOperand (FFI.upCast p)
+    where getOperand md i = (castPtr <$> FFI.getMDNodeOperand md i) :: IO (Ptr a')
 
 encodeDWOp :: A.DWOp -> [Word64]
 encodeDWOp op =
@@ -1104,6 +1044,8 @@ instance DecodeM DecodeAST A.Operand (Ptr FFI.MDValue) where
 
 instance DecodeM DecodeAST A.Metadata (Ptr FFI.MetadataAsVal) where
   decodeM = decodeM <=< liftIO . FFI.getMetadataOperand
+
+genCodingInstance [t|A.DIMacroInfo|] ''FFI.Macinfo [ (FFI.DW_Macinfo_Define, A.Define), (FFI.DW_Macinfo_Undef, A.Undef) ]
 
 decodeMDNode :: Ptr FFI.MDNode -> DecodeAST (Either String A.MDNode)
 decodeMDNode p = scopeAnyCont $ do
@@ -1221,6 +1163,11 @@ instance DecodeM DecodeAST A.DIGlobalVariableExpression (Ptr FFI.DIGlobalVariabl
     var <- decodeM =<< liftIO (FFI.getDIGlobalVariableExpressionVariable p)
     expr <- decodeM =<< liftIO (FFI.getDIGlobalVariableExpressionExpression p)
     pure (A.GlobalVariableExpression var expr)
+
+genCodingInstance [t|A.ImportedEntityTag|] ''FFI.DwTag
+  [ (FFI.DwTag_imported_module, A.ImportedModule)
+  , (FFI.DwTag_imported_declaration, A.ImportedDeclaration)
+  ]
 
 instance EncodeM EncodeAST A.DIImportedEntity (Ptr FFI.DIImportedEntity) where
   encodeM A.ImportedEntity {..} = do

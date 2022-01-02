@@ -203,6 +203,3 @@ instance Typed Global where
 
 instance Typed Parameter where
   typeOf (Parameter t _ _) = return $ Right t
-
-instance Typed [Int32] where
-  typeOf mask = return $ Right $ VectorType (fromIntegral $ length mask) i32

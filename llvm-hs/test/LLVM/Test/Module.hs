@@ -307,6 +307,7 @@ tests = testGroup "Module" [
             \\t.size\tmain, .Lfunc_end0-main\n\
             \\t.cfi_endproc\n\
             \\n\
+            \\n\
             \\t.section\t\".note.GNU-stack\",\"\",@progbits\n"
    ],
 
@@ -391,7 +392,7 @@ tests = testGroup "Module" [
       let s = "; ModuleID = '<string>'\n\
               \source_filename = \"<string>\"\n\
               \\n\
-              \define void @bar(metadata %0) {\n\
+              \define void @bar(metadata) {\n\
               \  ret void\n\
               \}\n"
           ast = Module "<string>" "<string>" Nothing Nothing [

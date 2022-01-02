@@ -2,12 +2,11 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/InstrTypes.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/AbstractCallSite.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/CallSite.h"
 
 #include "llvm-c/Core.h"
 
@@ -37,12 +36,12 @@ LLVM_HS_FOR_EACH_SYNCRONIZATION_SCOPE(ENUM_CASE)
 	}
 }
 
-static LLVMAtomicRMWBinOp_ wrap(AtomicRMWInst::BinOp l) {
+static LLVMAtomicRMWBinOp wrap(AtomicRMWInst::BinOp l) {
 	switch(l) {
-#define ENUM_CASE(x) case AtomicRMWInst::x: return LLVMAtomicRMWBinOp_ ## x;
+#define ENUM_CASE(x) case AtomicRMWInst::x: return LLVMAtomicRMWBinOp ## x;
 LLVM_HS_FOR_EACH_RMW_OPERATION(ENUM_CASE)
 #undef ENUM_CASE
-	default: return LLVMAtomicRMWBinOp_(0);
+	default: return LLVMAtomicRMWBinOp(0);
 	}
 }
 
@@ -78,21 +77,21 @@ LLVMFastMathFlags LLVM_Hs_GetFastMathFlags(LLVMValueRef val) {
 	return wrap(unwrap<Instruction>(val)->getFastMathFlags());
 }
 
-void LLVM_Hs_AbstractCallSiteSetAttributeList(LLVMValueRef i, LLVMAttributeListRef attrs) {
-  unwrap<CallBase>(i)->setAttributes(*attrs);
+void LLVM_Hs_CallSiteSetAttributeList(LLVMValueRef i, LLVMAttributeListRef attrs) {
+	CallSite(unwrap<Instruction>(i)).setAttributes(*attrs);
 }
 
-unsigned LLVM_Hs_GetAbstractCallSiteCallingConvention(LLVMValueRef i) {
-  return unsigned(unwrap<CallBase>(i)->getCallingConv());
+unsigned LLVM_Hs_GetCallSiteCallingConvention(LLVMValueRef i) {
+  return unsigned(CallSite(unwrap<Instruction>(i)).getCallingConv());
 }
 
-void LLVM_Hs_SetAbstractCallSiteCallingConvention(LLVMValueRef i, unsigned cc) {
-  unwrap<CallBase>(i)->setCallingConv(llvm::CallingConv::ID(cc));
+void LLVM_Hs_SetCallSiteCallingConvention(LLVMValueRef i, unsigned cc) {
+  CallSite(unwrap<Instruction>(i)).setCallingConv(llvm::CallingConv::ID(cc));
 }
 
-LLVMAttributeSetRef LLVM_Hs_AbstractCallSiteAttributesAtIndex(LLVMValueRef i, LLVMAttributeIndex idx) {
-    auto cs = unwrap<CallBase>(i);
-    return new AttributeSet(cs->getAttributes().getAttributes(idx));
+LLVMAttributeSetRef LLVM_Hs_CallSiteAttributesAtIndex(LLVMValueRef i, LLVMAttributeIndex idx) {
+    auto cs = CallSite(unwrap<Instruction>(i));
+    return new AttributeSet(cs.getAttributes().getAttributes(idx));
 }
 
 #define CHECK(name)                                                            \
@@ -137,7 +136,7 @@ unsigned LLVM_Hs_GetInstrAlignment(LLVMValueRef l) {
 
 void LLVM_Hs_SetInstrAlignment(LLVMValueRef l, unsigned a) {
 	switch(unwrap<Instruction>(l)->getOpcode()) {
-#define ENUM_CASE(n) case Instruction::n: unwrap<n ## Inst>(l)->setAlignment(Align(a)); break;
+#define ENUM_CASE(n) case Instruction::n: unwrap<n ## Inst>(l)->setAlignment(a); break;
 		LLVM_HS_FOR_EACH_ALIGNMENT_INST(ENUM_CASE)
 #undef ENUM_CASE
 	}
@@ -198,7 +197,7 @@ LLVMBool LLVM_Hs_GetInBounds(LLVMValueRef i) {
 	return unwrap<GEPOperator>(i)->isInBounds();
 }
 
-LLVMAtomicRMWBinOp_ LLVM_Hs_GetAtomicRMWBinOp(LLVMValueRef i) {
+LLVMAtomicRMWBinOp LLVM_Hs_GetAtomicRMWBinOp(LLVMValueRef i) {
 	return wrap(unwrap<AtomicRMWInst>(i)->getOperation());
 }
 
@@ -265,16 +264,6 @@ unsigned LLVM_Hs_GetMetadata(
 		}
 	}
 	return mds.size();
-}
-
-unsigned LLVM_Hs_GetShuffleVectorMaskSize(LLVMValueRef i) {
-  return unwrap<ShuffleVectorInst>(i)->getShuffleMask().size();
-}
-
-void LLVM_Hs_GetShuffleVectorMask(LLVMValueRef i, unsigned int numResults, int *result) {
-  const auto& mask = unwrap<ShuffleVectorInst>(i)->getShuffleMask();
-  assert(numResults == mask.size());
-  std::copy(mask.begin(), mask.end(), result);
 }
 
 LLVMValueRef LLVM_Hs_GetCleanupPad(LLVMValueRef i) {

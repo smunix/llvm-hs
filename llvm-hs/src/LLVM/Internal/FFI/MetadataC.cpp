@@ -51,22 +51,8 @@ LLVMMetadataRef LLVM_Hs_IsAMDNode(LLVMMetadataRef md) {
     return nullptr;
 }
 
-LLVMMetadataRef LLVM_Hs_IsAMDValue(LLVMMetadataRef md) {
-    if (isa<ValueAsMetadata>(unwrap(md))) {
-        return md;
-    }
-    return nullptr;
-}
-
 LLVMValueRef LLVM_Hs_GetMDValue(LLVMMetadataRef md) {
     return wrap(unwrap<ValueAsMetadata>(md)->getValue());
-}
-
-LLVMValueRef LLVM_Hs_IsAMetadataOperand(LLVMValueRef val) {
-    if (isa<MetadataAsValue>(unwrap(val))) {
-        return val;
-    }
-    return nullptr;
 }
 
 LLVMMetadataRef LLVM_Hs_GetMetadataOperand(LLVMValueRef val) {
@@ -79,11 +65,21 @@ MDTuple* LLVM_Hs_Get_MDTuple(LLVMContextRef c,
     return MDTuple::get(*unwrap(c), {unwrap(mds), count});
 }
 
-/*
-void LLVM_Hs_DumpMetadata(LLVMMetadataRef md) {
-    unwrap(md)->dump();
+LLVMMetadataRef LLVM_Hs_IsAMDValue(LLVMMetadataRef md) {
+    if (isa<ValueAsMetadata>(unwrap(md))) {
+        return md;
+    }
+    return nullptr;
 }
-*/
+
+
+LLVMValueRef LLVM_Hs_IsAMetadataOperand(LLVMValueRef val) {
+    if (isa<MetadataAsValue>(unwrap(val))) {
+        return val;
+    }
+    return nullptr;
+}
+
 
 unsigned LLVM_Hs_GetMDKindNames(
 	LLVMContextRef c,
@@ -205,7 +201,7 @@ DIEnumerator* LLVM_Hs_Get_DIEnumerator(LLVMContextRef cxt, int64_t value, LLVMBo
 }
 
 int64_t LLVM_Hs_DIEnumerator_GetValue(DIEnumerator* md) {
-    return md->getValue().getLimitedValue();
+    return md->getValue();
 }
 
 LLVMBool LLVM_Hs_DIEnumerator_GetIsUnsigned(DIEnumerator* md) {
@@ -323,50 +319,21 @@ DISubrange* LLVM_Hs_Get_DISubrangeVariableCount(LLVMContextRef ctx, DIVariable* 
     return DISubrange::get(*unwrap(ctx), count, lowerBound);
 }
 
-DISubrange* LLVM_Hs_Get_DISubrangeVariableFields(LLVMContextRef ctx, Metadata* count, Metadata* lowerBound, Metadata* upperBound, Metadata* stride) {
-    return DISubrange::get(*unwrap(ctx), count, lowerBound, upperBound, stride);
-}
-
 LLVMBool LLVM_Hs_DISubrange_HasConstantCount(DISubrange* range) {
     return range->getCount().is<ConstantInt*>();
 }
 
-Metadata* LLVM_Hs_DISubrange_GetCount(DISubrange* range) {
-    return range->getRawCountNode();
-}
-
-int64_t LLVM_Hs_DISubrange_GetCountConstant(DISubrange* range) {
+int64_t LLVM_Hs_DISubrange_GetConstantCount(DISubrange* range) {
     return range->getCount().dyn_cast<ConstantInt*>()->getSExtValue();
 }
 
-DIVariable* LLVM_Hs_DISubrange_GetCountVariable(DISubrange* range) {
+DIVariable* LLVM_Hs_DISubrange_GetVariableCount(DISubrange* range) {
     return range->getCount().dyn_cast<DIVariable*>();
 }
 
-Metadata* LLVM_Hs_DISubrange_GetLowerBound(DISubrange* range) {
-    return range->getRawLowerBound();
-}
 
-Metadata* LLVM_Hs_DISubrange_GetUpperBound(DISubrange* range) {
-    return range->getRawUpperBound();
-}
-
-Metadata* LLVM_Hs_DISubrange_GetStride(DISubrange* range) {
-    return range->getRawStride();
-}
-
-LLVMMetadataRef LLVM_Hs_IsADIVariable(LLVMMetadataRef md) {
-    if (isa<DIVariable>(unwrap(md))) {
-        return md;
-    }
-    return nullptr;
-}
-
-LLVMMetadataRef LLVM_Hs_IsADIExpression(LLVMMetadataRef md) {
-    if (isa<DIExpression>(unwrap(md))) {
-        return md;
-    }
-    return nullptr;
+int64_t LLVM_Hs_DISubrange_GetLowerBound(DISubrange* range) {
+    return range->getLowerBound();
 }
 
 MDTuple* LLVM_Hs_DICompositeType_GetElements(DICompositeType *dt) {
@@ -686,14 +653,14 @@ DICompileUnit* LLVM_Hs_Get_DICompileUnit
    unsigned sourceLanguage, DIFile* file, MDString* producer, LLVMBool isOptimized, MDString* flags,
    unsigned runtimeVersion, MDString* splitDebugFilename, unsigned emissionKind, Metadata* enumTypes, Metadata* retainedTypes,
    Metadata* globalVariables, Metadata* importedEntities, Metadata* macros, uint64_t dwoid, LLVMBool splitDebugInlining,
-   LLVMBool debugInfoForProfiling, unsigned nameTableKind, LLVMBool debugBaseAddress, MDString *sysRoot, MDString *sdk) {
+   LLVMBool debugInfoForProfiling, unsigned nameTableKind, LLVMBool debugBaseAddress) {
     LLVMContext &c = *unwrap(ctx);
     return DICompileUnit::getDistinct
         (c,
          sourceLanguage, file, producer, isOptimized, flags,
          runtimeVersion, splitDebugFilename, emissionKind, enumTypes, retainedTypes,
          globalVariables, importedEntities, macros, dwoid, splitDebugInlining,
-         debugInfoForProfiling, nameTableKind, debugBaseAddress, sysRoot, sdk);
+         debugInfoForProfiling, nameTableKind, debugBaseAddress);
 }
 
 unsigned LLVM_Hs_DICompileUnit_GetLanguage(DICompileUnit* cu) {
@@ -783,14 +750,14 @@ DIType* LLVM_Hs_DITemplateParameter_GetType(DITemplateParameter* p) {
 
 // DITemplateTypeParameter
 
-DITemplateTypeParameter* LLVM_Hs_Get_DITemplateTypeParameter(LLVMContextRef ctx, MDString* name, DIType* type, bool isDefault) {
-    return DITemplateTypeParameter::get(*unwrap(ctx), name, type, isDefault);
+DITemplateTypeParameter* LLVM_Hs_Get_DITemplateTypeParameter(LLVMContextRef ctx, MDString* name, DIType* type) {
+    return DITemplateTypeParameter::get(*unwrap(ctx), name, type);
 }
 
 // DITemplateValueParameter
 
-DITemplateValueParameter* LLVM_Hs_Get_DITemplateValueParameter(LLVMContextRef ctx, MDString* name, DIType* type, uint16_t tag, bool isDefault, Metadata* value) {
-    return DITemplateValueParameter::get(*unwrap(ctx), tag, name, type, isDefault, value);
+DITemplateValueParameter* LLVM_Hs_Get_DITemplateValueParameter(LLVMContextRef ctx, MDString* name, DIType* type, uint16_t tag, Metadata* value) {
+    return DITemplateValueParameter::get(*unwrap(ctx), tag, name, type, value);
 }
 
 Metadata* LLVM_Hs_DITemplateValueParameter_GetValue(DITemplateValueParameter* p) {
@@ -915,8 +882,8 @@ DIType* LLVM_Hs_DIObjCProperty_GetType(DIObjCProperty* o) {
 
 // DIModule
 
-DIModule* LLVM_Hs_Get_DIModule(LLVMContextRef ctx, DIFile* file, DIScope* scope, MDString* name, MDString* configurationMacros, MDString* includePath, MDString* apiNotesFile, unsigned lineNo) {
-    return DIModule::get(*unwrap(ctx), file, scope, name, configurationMacros, includePath, apiNotesFile, lineNo);
+DIModule* LLVM_Hs_Get_DIModule(LLVMContextRef ctx, DIScope* scope, MDString* name, MDString* configurationMacros, MDString* includePath, MDString* isysRoot) {
+    return DIModule::get(*unwrap(ctx), scope, name, configurationMacros, includePath, isysRoot);
 }
 
 MDString* LLVM_Hs_DIModule_GetConfigurationMacros(DIModule* m) {
@@ -927,11 +894,7 @@ MDString* LLVM_Hs_DIModule_GetIncludePath(DIModule* m) {
     return m->getRawIncludePath();
 }
 
-MDString* LLVM_Hs_DIModule_GetAPINotesFile(DIModule* m) {
-    return m->getRawAPINotesFile();
-}
-
-uint32_t LLVM_Hs_DIModule_GetLineNo(DIModule* m) {
-    return m->getLineNo();
+MDString* LLVM_Hs_DIModule_GetISysRoot(DIModule* m) {
+    return m->getRawISysRoot();
 }
 }

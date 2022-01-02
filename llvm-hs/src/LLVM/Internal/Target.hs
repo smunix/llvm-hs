@@ -1,10 +1,10 @@
-{-# LANGUAGE CPP                   #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE RecordWildCards       #-}
-{-# LANGUAGE TemplateHaskell       #-}
-{-# LANGUAGE UndecidableInstances  #-}
-
+{-# LANGUAGE
+  TemplateHaskell,
+  MultiParamTypeClasses,
+  RecordWildCards,
+  UndecidableInstances,
+  OverloadedStrings
+  #-}
 module LLVM.Internal.Target where
 
 import LLVM.Prelude
@@ -16,15 +16,12 @@ import Control.Monad.Trans.Except
 
 import Data.Attoparsec.ByteString
 import Data.Attoparsec.ByteString.Char8
+import qualified Data.ByteString as ByteString
 import Data.Char
 import Data.Map (Map)
+import qualified Data.Map as Map
 import Foreign.C.String
 import Foreign.Ptr
-import qualified Data.ByteString as ByteString
-import qualified Data.Map as Map
-#if __GLASGOW_HASKELL__ < 808
-import Control.Monad.Fail (MonadFail)
-#endif
 
 import LLVM.Internal.Coding
 import LLVM.Internal.String ()
@@ -149,7 +146,7 @@ lookupTarget ::
   Maybe ShortByteString -- ^ arch
   -> ShortByteString -- ^ \"triple\" - e.g. x86_64-unknown-linux-gnu
   -> IO (Target, ShortByteString)
-lookupTarget arch triple = runAnyContT' return $ do
+lookupTarget arch triple = flip runAnyContT return $ do
   cErrorP <- alloca
   cNewTripleP <- alloca
   arch <- encodeM (maybe "" id arch)
@@ -171,6 +168,7 @@ withTargetOptions = bracket FFI.createTargetOptions FFI.disposeTargetOptions . (
 pokeTargetOptions :: TO.Options -> TargetOptions -> IO ()
 pokeTargetOptions hOpts opts@(TargetOptions cOpts) = do
   mapM_ (\(c, ha) -> FFI.setTargetOptionFlag cOpts c =<< encodeM (ha hOpts)) [
+    (FFI.targetOptionFlagPrintMachineCode, TO.printMachineCode),
     (FFI.targetOptionFlagUnsafeFPMath, TO.unsafeFloatingPointMath),
     (FFI.targetOptionFlagNoInfsFPMath, TO.noInfinitiesFloatingPointMath),
     (FFI.targetOptionFlagNoNaNsFPMath, TO.noNaNsFloatingPointMath),
@@ -213,6 +211,7 @@ pokeMachineCodeOptions hOpts (MCTargetOptions cOpts) =
     (FFI.mcTargetOptionFlagMCSaveTempLabels, TO.saveTemporaryLabels),
     (FFI.mcTargetOptionFlagMCUseDwarfDirectory, TO.useDwarfDirectory),
     (FFI.mcTargetOptionFlagMCIncrementalLinkerCompatible, TO.incrementalLinkerCompatible),
+    (FFI.mcTargetOptionFlagMCPIECopyRelocations, TO.pieCopyRelocations),
     (FFI.mcTargetOptionFlagShowMCEncoding, TO.showMachineCodeEncoding),
     (FFI.mcTargetOptionFlagShowMCInst, TO.showMachineCodeInstructions),
     (FFI.mcTargetOptionFlagAsmVerbose, TO.verboseAssembly),
@@ -223,6 +222,8 @@ pokeMachineCodeOptions hOpts (MCTargetOptions cOpts) =
 peekTargetOptions :: TargetOptions -> IO TO.Options
 peekTargetOptions opts@(TargetOptions tOpts) = do
   let gof = decodeM <=< FFI.getTargetOptionsFlag tOpts
+  printMachineCode
+    <- gof FFI.targetOptionFlagPrintMachineCode
   unsafeFloatingPointMath
     <- gof FFI.targetOptionFlagUnsafeFPMath
   noInfinitiesFloatingPointMath
@@ -293,6 +294,8 @@ peekMachineCodeOptions (MCTargetOptions tOpts) = do
     <- gof FFI.mcTargetOptionFlagMCUseDwarfDirectory
   incrementalLinkerCompatible
     <- gof FFI.mcTargetOptionFlagMCIncrementalLinkerCompatible
+  pieCopyRelocations
+    <- gof FFI.mcTargetOptionFlagMCPIECopyRelocations
   showMachineCodeEncoding
     <- gof FFI.mcTargetOptionFlagShowMCEncoding
   showMachineCodeInstructions
@@ -437,7 +440,7 @@ newtype TargetLibraryInfo = TargetLibraryInfo (Ptr FFI.TargetLibraryInfo)
 
 -- | Look up a 'LibraryFunction' by its standard name
 getLibraryFunction :: TargetLibraryInfo -> ShortByteString -> IO (Maybe LibraryFunction)
-getLibraryFunction (TargetLibraryInfo f) name = runAnyContT' return $ do
+getLibraryFunction (TargetLibraryInfo f) name = flip runAnyContT return $ do
   libFuncP <- alloca :: AnyContT IO (Ptr FFI.LibFunc)
   name <- (encodeM name :: AnyContT IO CString)
   r <- decodeM =<< (liftIO $ FFI.getLibFunc f name libFuncP)
@@ -445,7 +448,7 @@ getLibraryFunction (TargetLibraryInfo f) name = runAnyContT' return $ do
 
 -- | Get a the current name to be emitted for a 'LibraryFunction'
 getLibraryFunctionName :: TargetLibraryInfo -> LibraryFunction -> IO ShortByteString
-getLibraryFunctionName (TargetLibraryInfo f) l = runAnyContT' return $ do
+getLibraryFunctionName (TargetLibraryInfo f) l = flip runAnyContT return $ do
   l <- encodeM l
   decodeM $ FFI.libFuncGetName f l
 
@@ -455,7 +458,7 @@ setLibraryFunctionAvailableWithName ::
   -> LibraryFunction
   -> ShortByteString -- ^ The function name to be emitted
   -> IO ()
-setLibraryFunctionAvailableWithName (TargetLibraryInfo f) libraryFunction name = runAnyContT' return $ do
+setLibraryFunctionAvailableWithName (TargetLibraryInfo f) libraryFunction name = flip runAnyContT return $ do
   name <- encodeM name
   libraryFunction <- encodeM libraryFunction
   liftIO $ FFI.libFuncSetAvailableWithName f libraryFunction name
@@ -465,6 +468,6 @@ withTargetLibraryInfo ::
   ShortByteString -- ^ triple
   -> (TargetLibraryInfo -> IO a)
   -> IO a
-withTargetLibraryInfo triple f = runAnyContT' return $ do
+withTargetLibraryInfo triple f = flip runAnyContT return $ do
   triple <- encodeM triple
   liftIO $ bracket (FFI.createTargetLibraryInfo triple) FFI.disposeTargetLibraryInfo (f . TargetLibraryInfo)

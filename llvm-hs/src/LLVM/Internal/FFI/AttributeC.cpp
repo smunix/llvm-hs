@@ -18,8 +18,16 @@ static_assert(sizeof(Attribute) == sizeof(AttributeImpl *),
 LLVM_HS_FOR_EACH_ATTRIBUTE_KIND(CHECK)
 #undef CHECK
 
+unsigned LLVM_Hs_AttributeKindAsEnum(LLVMAttributeRef a) {
+    return unwrap(a).getKindAsEnum();
+}
+
 uint64_t LLVM_Hs_AttributeValueAsInt(LLVMAttributeRef a) {
     return unwrap(a).getValueAsInt();
+}
+
+LLVMBool LLVM_Hs_IsStringAttribute(LLVMAttributeRef a) {
+    return unwrap(a).isStringAttribute();
 }
 
 const char *LLVM_Hs_AttributeKindAsString(LLVMAttributeRef a, size_t &l) {
@@ -34,17 +42,17 @@ const char *LLVM_Hs_AttributeValueAsString(LLVMAttributeRef a, size_t &l) {
     return s.data();
 }
 
-AttributeList * LLVM_Hs_GetAttributeList(LLVMContextRef context,
-                                         unsigned index,
-                                         AttributeSet *as) {
+LLVMAttributeListRef LLVM_Hs_GetAttributeList(LLVMContextRef context,
+                                              unsigned index,
+                                              LLVMAttributeSetRef as) {
     return new AttributeList(AttributeList::get(*unwrap(context), index, *as));
 }
 
-AttributeList * LLVM_Hs_BuildAttributeList(LLVMContextRef context,
-                                           AttributeSet *fAttrs,
-                                           AttributeSet *rAttrs,
-                                           AttributeSet **pAttrs,
-                                           unsigned numPAttrs) {
+LLVMAttributeListRef LLVM_Hs_BuildAttributeList(LLVMContextRef context,
+                                                LLVMAttributeSetRef fAttrs,
+                                                LLVMAttributeSetRef rAttrs,
+                                                LLVMAttributeSetRef *pAttrs,
+                                                unsigned numPAttrs) {
     std::vector<AttributeSet> pAttrSets{numPAttrs};
     for (unsigned i = 0; i < numPAttrs; ++i) {
         pAttrSets[i] = *pAttrs[i];
@@ -53,33 +61,33 @@ AttributeList * LLVM_Hs_BuildAttributeList(LLVMContextRef context,
         AttributeList::get(*unwrap(context), *fAttrs, *rAttrs, pAttrSets));
 }
 
-void LLVM_Hs_DisposeAttributeList(AttributeList *attributeList) {
+void LLVM_Hs_DisposeAttributeList(LLVMAttributeListRef attributeList) {
     delete attributeList;
 }
 
-AttributeSet *LLVM_Hs_GetAttributeSet(LLVMContextRef context,
-                                      const AttrBuilder &ab) {
+LLVMAttributeSetRef LLVM_Hs_GetAttributeSet(LLVMContextRef context,
+                                            const AttrBuilder &ab) {
     return new AttributeSet(AttributeSet::get(*unwrap(context), ab));
 }
 
-void LLVM_Hs_DisposeAttributeSet(AttributeList *attributeList) {
+void LLVM_Hs_DisposeAttributeSet(LLVMAttributeListRef attributeList) {
     delete attributeList;
 }
 
-LLVMBool LLVM_Hs_AttributeSetsEqual(AttributeSet *as1,
-                                    AttributeSet *as2) {
+LLVMBool LLVM_Hs_AttributeSetsEqual(LLVMAttributeSetRef as1,
+                                    LLVMAttributeSetRef as2) {
     return *as1 == *as2;
 }
 
-LLVMBool LLVM_Hs_AttributeSetHasAttributes(AttributeSet *as) {
+LLVMBool LLVM_Hs_AttributeSetHasAttributes(LLVMAttributeSetRef as) {
     return as->hasAttributes();
 }
 
-unsigned LLVM_Hs_getNumAttributes(AttributeSet *attributeSet) {
+unsigned LLVM_Hs_getNumAttributes(LLVMAttributeSetRef attributeSet) {
     return attributeSet->getNumAttributes();
 }
 
-void LLVM_Hs_getAttributes(AttributeSet *attributeSet,
+void LLVM_Hs_getAttributes(LLVMAttributeSetRef attributeSet,
                            LLVMAttributeRef *attrs) {
     for (auto a : *attributeSet) {
         *attrs++ = wrap(a);
@@ -92,11 +100,11 @@ AttrBuilder *LLVM_Hs_ConstructAttrBuilder(char *p) {
     return new (p) AttrBuilder();
 }
 
-AttrBuilder *LLVM_Hs_AttrBuilderFromAttrSet(AttributeSet *as) {
+AttrBuilder *LLVM_Hs_AttrBuilderFromAttrSet(LLVMAttributeSetRef as) {
     return new AttrBuilder(*as);
 }
 
-void LLVM_Hs_DisposeAttrBuilder(AttributeSet *as) { delete as; }
+void LLVM_Hs_DisposeAttrBuilder(LLVMAttributeSetRef as) { delete as; }
 
 void LLVM_Hs_AttrBuilderMerge(AttrBuilder *ab1, AttrBuilder *ab2) {
     ab1->merge(*ab2);
@@ -115,11 +123,11 @@ void LLVM_Hs_AttrBuilderAddStringAttribute(AttrBuilder &ab, const char *kind,
 }
 
 void LLVM_Hs_AttrBuilderAddAlignment(AttrBuilder &ab, uint64_t v) {
-    ab.addAlignmentAttr(MaybeAlign(v));
+    ab.addAlignmentAttr(v);
 }
 
 void LLVM_Hs_AttrBuilderAddStackAlignment(AttrBuilder &ab, uint64_t v) {
-    ab.addStackAlignmentAttr(MaybeAlign(v));
+    ab.addStackAlignmentAttr(v);
 }
 
 void LLVM_Hs_AttrBuilderAddAllocSize(AttrBuilder &ab, unsigned x, unsigned y,

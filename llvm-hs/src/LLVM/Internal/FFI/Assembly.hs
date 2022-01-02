@@ -24,3 +24,6 @@ foreign import ccall unsafe "LLVM_Hs_ParseLLVMAssembly" parseLLVMAssembly ::
 -- | LLVM's serializer to generate a string of llvm assembly from a module
 foreign import ccall unsafe "LLVM_Hs_WriteLLVMAssembly" writeLLVMAssembly ::
   Ptr Module -> Ptr RawOStream -> IO ()
+
+
+

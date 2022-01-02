@@ -37,12 +37,6 @@ foreign import ccall unsafe "LLVM_Hs_IsAMetadataOperand" isAMetadataOperand ::
 foreign import ccall unsafe "LLVM_Hs_GetMetadataClassId" getMetadataClassId ::
   Ptr MDNode -> IO (MDSubclassID)
 
-foreign import ccall unsafe "LLVM_Hs_IsADIVariable" isADIVariable ::
-  Ptr Metadata -> IO (Ptr DIVariable)
-
-foreign import ccall unsafe "LLVM_Hs_IsADIExpression" isADIExpression ::
-  Ptr Metadata -> IO (Ptr DIExpression)
-
 -- DILocation
 
 foreign import ccall unsafe "LLVM_Hs_DILocation_GetLine" getDILocationLine ::
@@ -59,11 +53,6 @@ foreign import ccall unsafe "LLVM_Hs_Get_DILocation" getDILocation ::
 
 foreign import ccall unsafe "LLVM_Hs_GetMDValue" getMDValue ::
   Ptr MDValue -> IO (Ptr Value)
-
-{-
-foreign import ccall unsafe "LLVM_Hs_DumpMetadata" dumpMetadata ::
-  Ptr Metadata -> IO ()
--}
 
 foreign import ccall unsafe "LLVM_Hs_GetMetadataOperand" getMetadataOperand ::
   Ptr MetadataAsVal -> IO (Ptr Metadata)
@@ -302,34 +291,17 @@ foreign import ccall unsafe "LLVM_Hs_Get_DISubrangeConstantCount" getDISubrangeC
 foreign import ccall unsafe "LLVM_Hs_Get_DISubrangeVariableCount" getDISubrangeVariableCount ::
   Ptr Context -> Ptr DIVariable -> Int64 -> IO (Ptr DISubrange)
 
-foreign import ccall unsafe "LLVM_Hs_Get_DISubrangeVariableFields" getDISubrangeVariableFields ::
-  Ptr Context ->
-  Ptr Metadata -> -- count
-  Ptr Metadata -> -- lowerBound
-  Ptr Metadata -> -- upperBound
-  Ptr Metadata -> -- strides
-  IO (Ptr DISubrange)
-
 foreign import ccall unsafe "LLVM_Hs_DISubrange_HasConstantCount" getDISubrangeHasConstantCount ::
   Ptr DISubrange -> IO LLVMBool
 
-foreign import ccall unsafe "LLVM_Hs_DISubrange_GetCount" getDISubrangeCount ::
-  Ptr DISubrange -> IO (Ptr Metadata)
-
-foreign import ccall unsafe "LLVM_Hs_DISubrange_GetCountVariable" getDISubrangeCountVariable ::
+foreign import ccall unsafe "LLVM_Hs_DISubrange_GetVariableCount" getDISubrangeCountVariable ::
   Ptr DISubrange -> IO (Ptr DIVariable)
 
-foreign import ccall unsafe "LLVM_Hs_DISubrange_GetCountConstant" getDISubrangeCountConstant ::
+foreign import ccall unsafe "LLVM_Hs_DISubrange_GetConstantCount" getDISubrangeCountConstant ::
   Ptr DISubrange -> IO Int64
 
 foreign import ccall unsafe "LLVM_Hs_DISubrange_GetLowerBound" getDISubrangeLowerBound ::
-  Ptr DISubrange -> IO (Ptr Metadata)
-
-foreign import ccall unsafe "LLVM_Hs_DISubrange_GetUpperBound" getDISubrangeUpperBound ::
-  Ptr DISubrange -> IO (Ptr Metadata)
-
-foreign import ccall unsafe "LLVM_Hs_DISubrange_GetStride" getDISubrangeStride ::
-  Ptr DISubrange -> IO (Ptr Metadata)
+  Ptr DISubrange -> IO Int64
 
 -- DISubprogram
 
@@ -547,7 +519,7 @@ foreign import ccall unsafe "LLVM_Hs_Get_DITemplateTypeParameter" getDITemplateT
 -- DITemplateValueParameter
 
 foreign import ccall unsafe "LLVM_Hs_Get_DITemplateValueParameter" getDITemplateValueParameter ::
-  Ptr Context -> Ptr MDString -> Ptr DIType -> DwTag -> Bool -> Ptr Metadata -> IO (Ptr DITemplateValueParameter)
+  Ptr Context -> Ptr MDString -> Ptr DIType -> DwTag -> Ptr Metadata -> IO (Ptr DITemplateValueParameter)
 
 foreign import ccall unsafe "LLVM_Hs_DITemplateValueParameter_GetValue" getDITemplateValueParameterValue ::
   Ptr DITemplateValueParameter -> IO (Ptr Metadata)
@@ -640,7 +612,7 @@ foreign import ccall unsafe "LLVM_Hs_DIObjCProperty_GetType" getDIObjCPropertyTy
 
 -- DIModule
 foreign import ccall unsafe "LLVM_Hs_Get_DIModule" getDIModule ::
-  Ptr Context -> Ptr DIScope -> Ptr MDString -> Ptr MDString -> Ptr MDString -> Ptr MDString -> Word32 -> IO (Ptr DIModule)
+  Ptr Context -> Ptr DIScope -> Ptr MDString -> Ptr MDString -> Ptr MDString -> Ptr MDString -> IO (Ptr DIModule)
 
 foreign import ccall unsafe "LLVM_Hs_DIModule_GetConfigurationMacros" getDIModuleConfigurationMacros ::
   Ptr DIModule -> IO (Ptr MDString)
@@ -648,8 +620,5 @@ foreign import ccall unsafe "LLVM_Hs_DIModule_GetConfigurationMacros" getDIModul
 foreign import ccall unsafe "LLVM_Hs_DIModule_GetIncludePath" getDIModuleIncludePath ::
   Ptr DIModule -> IO (Ptr MDString)
 
-foreign import ccall unsafe "LLVM_Hs_DIModule_GetAPINotesFile" getDIModuleAPINotesFile ::
+foreign import ccall unsafe "LLVM_Hs_DIModule_GetISysRoot" getDIModuleISysRoot ::
   Ptr DIModule -> IO (Ptr MDString)
-
-foreign import ccall unsafe "LLVM_Hs_DIModule_GetLineNo" getDIModuleLineNo ::
-  Ptr DIModule -> IO Word32

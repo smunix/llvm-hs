@@ -17,16 +17,16 @@ data Pass
   | BreakCriticalEdges
   -- | can use a 'LLVM.Target.TargetMachine'
   | CodeGenPrepare
+  | ConstantPropagation
   | CorrelatedValuePropagation
   | DeadCodeElimination
+  | DeadInstructionElimination
   | DeadStoreElimination
   | DemoteRegisterToMemory
   | EarlyCommonSubexpressionElimination
   | GlobalValueNumbering { noLoads :: Bool }
   | InductionVariableSimplify
   | InstructionCombining
-  -- | Instruction simplification includes constant folding
-  | InstructionSimplify
   | JumpThreading
   | LoopClosedSingleStaticAssignment
   | LoopInvariantCodeMotion
@@ -45,9 +45,9 @@ data Pass
   | PromoteMemoryToRegister
   | Reassociate
   | ScalarReplacementOfAggregates { requiresDominatorTree :: Bool }
-  | OldScalarReplacementOfAggregates {
-      oldScalarReplacementOfAggregatesThreshold :: Maybe Word,
-      useDominatorTree :: Bool,
+  | OldScalarReplacementOfAggregates { 
+      oldScalarReplacementOfAggregatesThreshold :: Maybe Word, 
+      useDominatorTree :: Bool, 
       structMemberThreshold :: Maybe Word,
       arrayElementThreshold :: Maybe Word,
       scalarLoadThreshold :: Maybe Word
@@ -63,11 +63,12 @@ data Pass
   | ArgumentPromotion
   | ConstantMerge
   | FunctionAttributes
-  | FunctionInlining {
+  | FunctionInlining { 
       functionInliningThreshold :: Word
     }
   | GlobalDeadCodeElimination
   | InternalizeFunctions { exportList :: [String] }
+  | InterproceduralConstantPropagation
   | InterproceduralSparseConditionalConstantPropagation
   | MergeFunctions
   | PartialInlining
@@ -88,11 +89,10 @@ data Pass
   | GCOVProfiler {
       emitNotes :: Bool,
       emitData :: Bool,
-      version :: GCOVVersion,
+      version :: GCOVVersion, 
+      useCfgChecksum :: Bool,
       noRedZone :: Bool,
-      atomic :: Bool,
-      filter :: String,
-      exclude :: String
+      functionNamesInData :: Bool
     }
   | AddressSanitizer
   | AddressSanitizerModule
@@ -121,11 +121,10 @@ defaultGCOVProfiler :: Pass
 defaultGCOVProfiler = GCOVProfiler {
     emitNotes = True,
     emitData = True,
-    version = GCOVVersion "402*",
+    version = GCOVVersion "402*", 
+    useCfgChecksum = False,
     noRedZone = False,
-    atomic = True,
-    LLVM.Transforms.filter = "",
-    exclude = ""
+    functionNamesInData = True
   }
 
 -- | Defaults for 'AddressSanitizer'.

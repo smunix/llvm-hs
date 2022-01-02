@@ -5,29 +5,29 @@ import LLVM.Prelude
 
 -- | <http://llvm.org/docs/LangRef.html#parameter-attributes>
 data ParameterAttribute
-    = Alignment Word64
-    | ByVal
-    | Dereferenceable Word64
-    | DereferenceableOrNull Word64
-    | ImmArg
-    | InAlloca
+    = ZeroExt
+    | SignExt
     | InReg
-    | Nest
+    | SRet
+    | Alignment Word64
     | NoAlias
+    | ByVal
     | NoCapture
     | NoFree
-    | NonNull
+    | Nest
     | ReadNone
     | ReadOnly
-    | Returned
-    | SignExt
-    | SRet
-    | SwiftError
-    | SwiftSelf
     | WriteOnly
+    | ImmArg
+    | InAlloca
+    | NonNull
+    | Dereferenceable Word64
+    | DereferenceableOrNull Word64
+    | Returned
+    | SwiftSelf
+    | SwiftError
     | StringAttribute {
         stringAttributeKind :: ShortByteString,
         stringAttributeValue :: ShortByteString -- ^ Use "" for no value -- the two are conflated
       }
-    | ZeroExt
   deriving (Eq, Ord, Read, Show, Typeable, Data, Generic)

@@ -120,16 +120,16 @@
     "lhp": {
       "flake": false,
       "locked": {
-        "lastModified": 1640927810,
-        "narHash": "sha256-Ht9/IbCKF04Jfe2STTwLvwkekOpkXVf4b7c3EOtdLeA=",
+        "lastModified": 1634299651,
+        "narHash": "sha256-EvSI03u8W3khNvh+nlHAIp/fFSCZk+jYk2b/D4hFC08=",
         "owner": "smunix",
         "repo": "llvm-hs-pretty",
-        "rev": "b0160ce8b4de0f4594e271cbb64f302a6f8c7fdc",
+        "rev": "990bb6981f6214d9c1bbf46fd9e9ce5596d3bf30",
         "type": "github"
       },
       "original": {
         "owner": "smunix",
-        "ref": "pre.llvm-12",
+        "ref": "fix.luctielen.pretty",
         "repo": "llvm-hs-pretty",
         "type": "github"
       }

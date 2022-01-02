@@ -6,7 +6,6 @@ import Prelude hiding (and, or, pred)
 
 import Data.Word
 import Data.Char (ord)
-import GHC.Int
 import GHC.Stack
 
 import LLVM.AST hiding (args, dests)
@@ -24,14 +23,6 @@ import LLVM.AST.Linkage
 
 import LLVM.IRBuilder.Monad
 import LLVM.IRBuilder.Module
-
--- | See <https://llvm.org/docs/LangRef.html#fneg-instruction reference>.
-fneg :: (MonadIRBuilder m, MonadModuleBuilder m) => Operand -> m Operand
-fneg a = do
-  ta <- typeOf a
-  case ta of
-    (Left s) -> error s
-    (Right ta') -> emitInstr ta' $ FNeg noFastMathFlags a []
 
 -- | See <https://llvm.org/docs/LangRef.html#fadd-instruction reference>.
 fadd :: (MonadIRBuilder m, MonadModuleBuilder m) => Operand -> Operand -> m Operand
@@ -289,7 +280,7 @@ insertElement v e i = do
     (Right tv') -> emitInstr tv' $ InsertElement v e i []
 
 -- | See <https://llvm.org/docs/LangRef.html#shufflevector-instruction reference>.
-shuffleVector :: (HasCallStack, MonadIRBuilder m, MonadModuleBuilder m) => Operand -> Operand -> [Int32] -> m Operand
+shuffleVector :: (HasCallStack, MonadIRBuilder m, MonadModuleBuilder m) => Operand -> Operand -> C.Constant -> m Operand
 shuffleVector a b m = do
   ta <- typeOf a
   tm <- typeOf m

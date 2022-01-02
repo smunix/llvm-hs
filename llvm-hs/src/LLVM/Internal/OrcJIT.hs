@@ -7,49 +7,30 @@ import Control.Exception
 import Control.Monad.AnyCont
 import Control.Monad.IO.Class
 import Data.Bits
+import Data.ByteString (packCString, useAsCString)
 import Data.IORef
 import Foreign.C.String
 import Foreign.Ptr
 
 import LLVM.Internal.Coding
-import LLVM.Internal.Module (Module, readModule)
-import LLVM.Internal.Target (TargetMachine(..))
-
-import qualified LLVM.Internal.FFI.LLVMCTypes as FFI
-import qualified LLVM.Internal.FFI.ShortByteString as SBS
+import LLVM.Internal.Target
 import qualified LLVM.Internal.FFI.DataLayout as FFI
+import qualified LLVM.Internal.FFI.LLVMCTypes as FFI
 import qualified LLVM.Internal.FFI.OrcJIT as FFI
 import qualified LLVM.Internal.FFI.Target as FFI
 
---------------------------------------------------------------------------------
--- ExecutionSession
---------------------------------------------------------------------------------
+-- | A mangled symbol which can be used in 'findSymbol'. This can be
+-- created using 'mangleSymbol'.
+newtype MangledSymbol = MangledSymbol ByteString
+  deriving (Show, Eq, Ord)
 
-data ExecutionSession = ExecutionSession {
-    sessionPtr :: !(Ptr FFI.ExecutionSession),
-    sessionCleanups :: !(IORef [IO ()])
-  }
+instance EncodeM (AnyContT IO) MangledSymbol CString where
+  encodeM (MangledSymbol bs) = anyContToM $ useAsCString bs
 
--- | Create a new `ExecutionSession`.
-createExecutionSession :: IO ExecutionSession
-createExecutionSession = ExecutionSession <$> FFI.createExecutionSession <*> newIORef []
+instance MonadIO m => DecodeM m MangledSymbol CString where
+  decodeM str = liftIO $ MangledSymbol <$> packCString str
 
--- | Dispose of an `ExecutionSession`. This should be called when the
--- `ExecutionSession` is not needed anymore.
-disposeExecutionSession :: ExecutionSession -> IO ()
-disposeExecutionSession (ExecutionSession es cleanups) = do
-  FFI.endSession es
-  sequence_ =<< readIORef cleanups
-  FFI.disposeExecutionSession es
-
--- | `bracket`-style wrapper around `createExecutionSession` and
--- `disposeExecutionSession`.
-withExecutionSession :: (ExecutionSession -> IO a) -> IO a
-withExecutionSession = bracket createExecutionSession disposeExecutionSession
-
---------------------------------------------------------------------------------
--- JITSymbol
---------------------------------------------------------------------------------
+newtype ExecutionSession = ExecutionSession (Ptr FFI.ExecutionSession)
 
 -- | Contrary to the C++ interface, we do not store the HasError flag
 -- here. Instead decoding a JITSymbol produces a sumtype based on
@@ -63,13 +44,11 @@ data JITSymbolFlags =
     -- absolute relocations for the symbol even in position
     -- independent code.
   , jitSymbolExported :: !Bool -- ^ Is this symbol exported?
-  , jitSymbolCallable :: !Bool
-  , jitSymbolMaterializationSideEffectsOnly :: !Bool
   }
   deriving (Show, Eq, Ord)
 
 defaultJITSymbolFlags :: JITSymbolFlags
-defaultJITSymbolFlags = JITSymbolFlags False False False False False False
+defaultJITSymbolFlags = JITSymbolFlags False False False False
 
 data JITSymbol =
   JITSymbol {
@@ -83,6 +62,22 @@ data JITSymbol =
 data JITSymbolError = JITSymbolError ShortByteString
   deriving (Show, Eq)
 
+-- | Specifies how external symbols in a module added to a
+-- 'CompileLayer' should be resolved.
+newtype SymbolResolver =
+  SymbolResolver (MangledSymbol -> IO (Either JITSymbolError JITSymbol))
+
+-- | Create a `FFI.SymbolResolver` that can be used with the JIT.
+withSymbolResolver :: ExecutionSession -> SymbolResolver -> (Ptr FFI.SymbolResolver -> IO a) -> IO a
+withSymbolResolver (ExecutionSession es) (SymbolResolver resolverFn) f =
+  bracket (FFI.wrapSymbolResolverFn resolverFn') freeHaskellFunPtr $ \resolverPtr ->
+    bracket (FFI.createLambdaResolver es resolverPtr) FFI.disposeSymbolResolver $ \resolver ->
+      f resolver
+  where
+    resolverFn' symbol result = do
+      setSymbol <- encodeM =<< resolverFn =<< decodeM symbol
+      setSymbol result
+
 instance Monad m => EncodeM m JITSymbolFlags FFI.JITSymbolFlags where
   encodeM f = return $ foldr1 (.|.) [
       if a f
@@ -92,9 +87,7 @@ instance Monad m => EncodeM m JITSymbolFlags FFI.JITSymbolFlags where
           (jitSymbolWeak, FFI.jitSymbolFlagsWeak),
           (jitSymbolCommon, FFI.jitSymbolFlagsCommon),
           (jitSymbolAbsolute, FFI.jitSymbolFlagsAbsolute),
-          (jitSymbolExported, FFI.jitSymbolFlagsExported),
-          (jitSymbolCallable, FFI.jitSymbolFlagsCallable),
-          (jitSymbolMaterializationSideEffectsOnly, FFI.jitSymbolFlagsMaterializationSideEffectsOnly)
+          (jitSymbolExported, FFI.jitSymbolFlagsExported)
         ]
     ]
 
@@ -104,180 +97,85 @@ instance Monad m => DecodeM m JITSymbolFlags FFI.JITSymbolFlags where
       jitSymbolWeak = FFI.jitSymbolFlagsWeak .&. f /= 0,
       jitSymbolCommon = FFI.jitSymbolFlagsCommon .&. f /= 0,
       jitSymbolAbsolute = FFI.jitSymbolFlagsAbsolute .&. f /= 0,
-      jitSymbolExported = FFI.jitSymbolFlagsExported .&. f /= 0,
-      jitSymbolCallable = FFI.jitSymbolFlagsCallable .&. f /= 0,
-      jitSymbolMaterializationSideEffectsOnly = FFI.jitSymbolFlagsMaterializationSideEffectsOnly .&. f /= 0
+      jitSymbolExported = FFI.jitSymbolFlagsExported .&. f /= 0
     }
 
-instance (MonadIO m, MonadAnyCont IO m) =>
-         DecodeM m (Either JITSymbolError JITSymbol) (Ptr FFI.ExpectedJITEvaluatedSymbol) where
-  decodeM expectedSym = do
+instance MonadIO m => EncodeM m (Either JITSymbolError JITSymbol) (Ptr FFI.JITSymbol -> IO ()) where
+  encodeM (Left (JITSymbolError _)) = return $ \jitSymbol ->
+    FFI.setJITSymbol jitSymbol (FFI.TargetAddress 0) FFI.jitSymbolFlagsHasError
+  encodeM (Right (JITSymbol addr flags)) = return $ \jitSymbol -> do
+    flags' <- encodeM flags
+    FFI.setJITSymbol jitSymbol (FFI.TargetAddress (fromIntegral addr)) flags'
+
+instance (MonadIO m, MonadAnyCont IO m) => DecodeM m (Either JITSymbolError JITSymbol) (Ptr FFI.JITSymbol) where
+  decodeM jitSymbol = do
     errMsg <- alloca
-    FFI.TargetAddress addr <- liftIO $ FFI.getExpectedSymbolAddress expectedSym errMsg
-    rawFlags <- liftIO (FFI.getExpectedSymbolFlags expectedSym)
+    FFI.TargetAddress addr <- liftIO $ FFI.getAddress jitSymbol errMsg
+    rawFlags <- liftIO (FFI.getFlags jitSymbol)
     if addr == 0 || (rawFlags .&. FFI.jitSymbolFlagsHasError /= 0)
       then do
-        errMsg <- decodeM errMsg
-        pure (Left (JITSymbolError errMsg))
+        errMsg' <- decodeM errMsg
+        pure (Left (JITSymbolError errMsg'))
       else do
         flags <- decodeM rawFlags
         pure (Right (JITSymbol (fromIntegral addr) flags))
 
---------------------------------------------------------------------------------
--- JITDylib
---------------------------------------------------------------------------------
+instance MonadIO m =>
+  EncodeM m SymbolResolver (IORef [IO ()] -> Ptr FFI.ExecutionSession -> IO (Ptr FFI.SymbolResolver)) where
+  encodeM (SymbolResolver resolverFn) = return $ \cleanups es -> do
+    resolverFn' <- allocFunPtr cleanups (encodeM resolverFn)
+    allocWithCleanup cleanups (FFI.createLambdaResolver es resolverFn') FFI.disposeSymbolResolver
 
-newtype JITDylib = JITDylib (Ptr FFI.JITDylib)
+instance MonadIO m => EncodeM m (MangledSymbol -> IO (Either JITSymbolError JITSymbol)) (FunPtr FFI.SymbolResolverFn) where
+  encodeM callback =
+    liftIO $ FFI.wrapSymbolResolverFn
+      (\symbol result -> do
+         setSymbol <- encodeM =<< callback =<< decodeM symbol
+         setSymbol result)
 
--- | Create a new 'JITDylib' with the given name.
-createJITDylib :: ExecutionSession -> ShortByteString -> IO JITDylib
-createJITDylib (ExecutionSession es _) name =
-  SBS.useAsCString name $ fmap JITDylib . FFI.createJITDylib es
+-- | Allocate the resource and register it for cleanup.
+allocWithCleanup :: IORef [IO ()] -> IO a -> (a -> IO ()) -> IO a
+allocWithCleanup cleanups alloc free = mask $ \restore -> do
+  a <- restore alloc
+  modifyIORef cleanups (free a :)
+  pure a
 
--- NB: JITDylib unloading is WIP (at least according to some old-looking docs)
+-- | Allocate a function pointer and register it for cleanup.
+allocFunPtr :: IORef [IO ()] -> IO (FunPtr a) -> IO (FunPtr a)
+allocFunPtr cleanups alloc = allocWithCleanup cleanups alloc freeHaskellFunPtr
 
--- | Adds a 'JITDylib' definition generator that looks up missing symbols in
--- the namespace of the current process.
-addDynamicLibrarySearchGeneratorForCurrentProcess :: IRLayer l => l -> JITDylib -> IO ()
-addDynamicLibrarySearchGeneratorForCurrentProcess compileLayer (JITDylib dylib) =
-  FFI.addDynamicLibrarySearchGeneratorForCurrentProcess dylib (getDataLayout compileLayer)
+createRegisteredDataLayout :: (MonadAnyCont IO m) => TargetMachine -> IORef [IO ()] -> m (Ptr FFI.DataLayout)
+createRegisteredDataLayout (TargetMachine tm) cleanups =
+  let createDataLayout = do
+        dl <- FFI.createTargetDataLayout tm
+        modifyIORef' cleanups (FFI.disposeDataLayout dl :)
+        pure dl
+  in anyContToM $ bracketOnError createDataLayout FFI.disposeDataLayout
 
--- | Adds a 'JITDylib' definition generator that looks up missing symbols in
--- the namespace of a shared library located at the specified 'FilePath'.
-addDynamicLibrarySearchGenerator :: IRLayer l => l -> JITDylib -> FilePath -> IO ()
-addDynamicLibrarySearchGenerator compileLayer (JITDylib dylib) s = withCString s $ \cStr ->
-  FFI.addDynamicLibrarySearchGenerator dylib (getDataLayout compileLayer) cStr
+-- | Create a new `ExecutionSession`.
+createExecutionSession :: IO ExecutionSession
+createExecutionSession = ExecutionSession <$> FFI.createExecutionSession
 
--- | Looks up an (unmangled) symbol name in the given 'JITDylib'.
---
--- The symbol is expected to have been added to the 'JITDylib' by the same 'IRLayer'
--- as specified in this function. Using a different 'IRLayer' can cause the lookup
--- to fail due to differences in mangling schemes.
-lookupSymbol :: IRLayer l => ExecutionSession -> l -> JITDylib -> ShortByteString -> IO (Either JITSymbolError JITSymbol)
-lookupSymbol (ExecutionSession es _) irl (JITDylib dylib) name = SBS.useAsCString name $ \nameStr ->
-  runAnyContT' return $ do
-    symbol <- anyContToM $ bracket
-      (FFI.lookupSymbol es dylib (getMangler irl) nameStr) FFI.disposeJITEvaluatedSymbol
-    decodeM symbol
+-- | Dispose of an `ExecutionSession`. This should be called when the
+-- `ExecutionSession` is not needed anymore.
+disposeExecutionSession :: ExecutionSession -> IO ()
+disposeExecutionSession (ExecutionSession es) = FFI.disposeExecutionSession es
 
---------------------------------------------------------------------------------
--- ThreadSafeContext
---------------------------------------------------------------------------------
+-- | `bracket`-style wrapper around `createExecutionSession` and
+-- `disposeExecutionSession`.
+withExecutionSession :: (ExecutionSession -> IO a) -> IO a
+withExecutionSession = bracket createExecutionSession disposeExecutionSession
 
-newtype ThreadSafeContext = ThreadSafeContext (Ptr FFI.ThreadSafeContext)
+-- | Allocate a module key for a new module to add to the JIT.
+allocateModuleKey :: ExecutionSession -> IO FFI.ModuleKey
+allocateModuleKey (ExecutionSession es) = FFI.allocateVModule es
 
--- | Create a 'ThreadSafeContext'
-createThreadSafeContext :: IO ThreadSafeContext
-createThreadSafeContext = ThreadSafeContext <$> FFI.createThreadSafeContext
+-- | Return a module key to the `ExecutionSession` so that it can be
+-- re-used.
+releaseModuleKey :: ExecutionSession -> FFI.ModuleKey -> IO ()
+releaseModuleKey (ExecutionSession es) k = FFI.releaseVModule es k
 
--- | Dispose of a 'ThreadSafeContext'
-disposeThreadSafeContext :: ThreadSafeContext -> IO ()
-disposeThreadSafeContext (ThreadSafeContext ctx) = FFI.disposeThreadSafeContext ctx
-
--- | 'bracket'-style wrapper around 'createThreadSafeContext'
--- and 'disposeThreadSafeContext'.
-withThreadSafeContext :: (ThreadSafeContext -> IO a) -> IO a
-withThreadSafeContext = bracket createThreadSafeContext disposeThreadSafeContext
-
---------------------------------------------------------------------------------
--- ThreadSafeModule
---------------------------------------------------------------------------------
-
-newtype ThreadSafeModule = ThreadSafeModule (Ptr FFI.ThreadSafeModule)
-
--- | Create a 'ThreadSafeModule' with the same content as the input 'Module'.
---
--- The module will get cloned into a fresh LLVM context. The lifetime of the
--- new context is bound to the lifetime of the returned 'ThreadSafeModule'.
-cloneAsThreadSafeModule :: Module -> IO ThreadSafeModule
-cloneAsThreadSafeModule m = do
-  mPtr <- readModule m
-  ThreadSafeModule <$> FFI.cloneAsThreadSafeModule mPtr
-
--- | Dispose of a 'ThreadSafeModule'.
-disposeThreadSafeModule :: ThreadSafeModule -> IO ()
-disposeThreadSafeModule (ThreadSafeModule m) = FFI.disposeThreadSafeModule m
-
--- | 'bracket'-style wrapper around 'cloneAsThreadSafeModule'
--- and 'disposeThreadSafeModule'.
-withClonedThreadSafeModule :: Module -> (ThreadSafeModule -> IO a) -> IO a
-withClonedThreadSafeModule m = bracket (cloneAsThreadSafeModule m) disposeThreadSafeModule
-
---------------------------------------------------------------------------------
--- ObjectLayer + RTDyldObjectLinkingLayer
---------------------------------------------------------------------------------
-
--- | A type class implemented by the different OrcJIT object layers.
---
--- See e.g. 'RTDyldObjectLinkingLayer'.
-class ObjectLayer l where
-  getObjectLayer :: l -> Ptr FFI.ObjectLayer
-
-
-data RTDyldObjectLinkingLayer = RTDyldObjectLinkingLayer !(Ptr FFI.ObjectLayer)
-
-instance ObjectLayer RTDyldObjectLinkingLayer where
-  getObjectLayer (RTDyldObjectLinkingLayer ol) = ol
-
--- | Create a new 'RTDyldObjectLinkingLayer'.
---
--- The layer will get automatically disposed along with its ExecutionSession.
-createRTDyldObjectLinkingLayer :: ExecutionSession -> IO RTDyldObjectLinkingLayer
-createRTDyldObjectLinkingLayer (ExecutionSession es cleanups) = do
-  ol <- FFI.createRTDyldObjectLinkingLayer es
-  modifyIORef' cleanups (FFI.disposeObjectLayer ol :)
-  return $ RTDyldObjectLinkingLayer ol
-
---------------------------------------------------------------------------------
--- IRLayer + IRCompileLayer
---------------------------------------------------------------------------------
-
--- | A mangled symbol name. Valid only for as long as the IRLayer that created it.
-newtype MangledSymbol = MangledSymbol (Ptr FFI.SymbolStringPtr)
-
--- | A type class implemented by the different OrcJIT IR layers.
---
--- See e.g. 'IRCompileLayer'.
-class IRLayer l where
-  getIRLayer :: l -> Ptr FFI.IRLayer
-  getDataLayout :: l -> Ptr FFI.DataLayout
-  getMangler :: l -> Ptr FFI.MangleAndInterner
-
--- | Add a 'Module' to the specified 'JITDylib'.
---
--- The specified 'IRLayer' will be responsible for compiling the symbols
--- present in the module. The module itself is consumed and __should not be used again__.
-addModule :: IRLayer l => ThreadSafeModule -> JITDylib -> l -> IO ()
-addModule (ThreadSafeModule m) (JITDylib dylib) irl =
-  FFI.irLayerAddModule m dylib (getDataLayout irl) (getIRLayer irl)
-
-mangleSymbol :: IRLayer l => l -> ShortByteString -> IO MangledSymbol
-mangleSymbol irl name = SBS.useAsCString name $ \namePtr ->
-  MangledSymbol <$> FFI.mangleSymbol (getMangler irl) namePtr
-
-disposeMangledSymbol :: MangledSymbol -> IO ()
-disposeMangledSymbol (MangledSymbol symbol) = FFI.disposeMangledSymbol symbol
-
-withMangledSymbol :: IRLayer l => l -> ShortByteString -> (MangledSymbol -> IO a) -> IO a
-withMangledSymbol irl name = bracket (mangleSymbol irl name) disposeMangledSymbol
-
--- | An IR layer that compiles the symbols in a module eagerly.
-data IRCompileLayer = IRCompileLayer !(Ptr FFI.IRLayer) !(Ptr FFI.DataLayout) !(Ptr FFI.MangleAndInterner)
-
-instance IRLayer IRCompileLayer where
-  getIRLayer    (IRCompileLayer cl _ _) = cl
-  getDataLayout (IRCompileLayer _ dl _) = dl
-  getMangler    (IRCompileLayer _ _ mg) = mg
-
--- | Create a new 'IRCompileLayer'.
---
--- The layer will get automatically disposed along with its ExecutionSession.
-createIRCompileLayer :: ObjectLayer l => ExecutionSession -> l -> TargetMachine -> IO IRCompileLayer
-createIRCompileLayer (ExecutionSession es cleanups) ol (TargetMachine tm) = do
-  dl <- FFI.createTargetDataLayout tm
-  modifyIORef' cleanups (FFI.disposeDataLayout dl :)
-  mg <- FFI.createMangleAndInterner es dl
-  modifyIORef' cleanups (FFI.disposeMangleAndInterner mg :)
-  cl <- FFI.createIRCompileLayer es (getObjectLayer ol) tm
-  modifyIORef' cleanups (FFI.disposeIRLayer cl :)
-  return $ IRCompileLayer cl dl mg
+-- | `bracket`-style wrapper around `allocateModuleKey` and
+-- `releaseModuleKey`.
+withModuleKey :: ExecutionSession -> (FFI.ModuleKey -> IO a) -> IO a
+withModuleKey es = bracket (allocateModuleKey es) (releaseModuleKey es)

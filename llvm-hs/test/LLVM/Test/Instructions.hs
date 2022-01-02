@@ -58,7 +58,7 @@ tests = testGroup "Instructions" [
           mStr = "; ModuleID = '<string>'\n\
                  \source_filename = \"<string>\"\n\
                  \\n\
-                 \define void @0(i32 %0, float %1, i32* %2, i64 %3, i1 %4, <2 x i32> %5, { i32, i32 } %6) {\n\
+                 \define void @0(i32, float, i32*, i64, i1, <2 x i32>, { i32, i32 }) {\n\
                  \  " <> namedInstrS <> "\n\
                  \  ret void\n\
                  \}\n"
@@ -77,20 +77,13 @@ tests = testGroup "Instructions" [
         [
          (name, UnName 8 := instr, "%8 = " <> instrS)
          | (name, instr, instrS) <- [
-          --("fneg",
-          -- FNeg {
-          --   fastMathFlags = noFastMathFlags,
-          --   operand0 = a 1,
-          --   metadata = []
-          -- },
-          -- "fneg float %1"),
           ("add",
            Add {
              nsw = False,
              nuw = False,
              operand0 = a 0,
              operand1 = a 0,
-             metadata = []
+             metadata = [] 
            },
            "add i32 %0, %0"),
           ("nsw",
@@ -99,7 +92,7 @@ tests = testGroup "Instructions" [
              nuw = False,
              operand0 = a 0,
              operand1 = a 0,
-             metadata = []
+             metadata = [] 
            },
            "add nsw i32 %0, %0"),
           ("nuw",
@@ -108,7 +101,7 @@ tests = testGroup "Instructions" [
              nuw = True,
              operand0 = a 0,
              operand1 = a 0,
-             metadata = []
+             metadata = [] 
            },
            "add nuw i32 %0, %0"),
           ("fadd",
@@ -116,7 +109,7 @@ tests = testGroup "Instructions" [
              fastMathFlags = noFastMathFlags,
              operand0 = a 1,
              operand1 = a 1,
-             metadata = []
+             metadata = [] 
            },
            "fadd float %1, %1"),
           ("sub",
@@ -125,7 +118,7 @@ tests = testGroup "Instructions" [
              nuw = False,
              operand0 = a 0,
              operand1 = a 0,
-             metadata = []
+             metadata = [] 
            },
            "sub i32 %0, %0"),
           ("fsub",
@@ -133,7 +126,7 @@ tests = testGroup "Instructions" [
              fastMathFlags = noFastMathFlags,
              operand0 = a 1,
              operand1 = a 1,
-             metadata = []
+             metadata = [] 
            },
            "fsub float %1, %1"),
           ("mul",
@@ -142,7 +135,7 @@ tests = testGroup "Instructions" [
              nuw = False,
              operand0 = a 0,
              operand1 = a 0,
-             metadata = []
+             metadata = [] 
            },
            "mul i32 %0, %0"),
           ("fmul",
@@ -150,7 +143,7 @@ tests = testGroup "Instructions" [
              fastMathFlags = noFastMathFlags,
              operand0 = a 1,
              operand1 = a 1,
-             metadata = []
+             metadata = [] 
            },
            "fmul float %1, %1"),
           ("udiv",
@@ -158,7 +151,7 @@ tests = testGroup "Instructions" [
              exact = False,
              operand0 = a 0,
              operand1 = a 0,
-             metadata = []
+             metadata = [] 
            },
            "udiv i32 %0, %0"),
           ("exact",
@@ -166,7 +159,7 @@ tests = testGroup "Instructions" [
              exact = True,
              operand0 = a 0,
              operand1 = a 0,
-             metadata = []
+             metadata = [] 
            },
            "udiv exact i32 %0, %0"),
           ("sdiv",
@@ -174,7 +167,7 @@ tests = testGroup "Instructions" [
              exact = False,
              operand0 = a 0,
              operand1 = a 0,
-             metadata = []
+             metadata = [] 
            },
            "sdiv i32 %0, %0"),
           ("fdiv",
@@ -182,21 +175,21 @@ tests = testGroup "Instructions" [
              fastMathFlags = noFastMathFlags,
              operand0 = a 1,
              operand1 = a 1,
-             metadata = []
+             metadata = [] 
            },
            "fdiv float %1, %1"),
           ("urem",
            URem {
              operand0 = a 0,
              operand1 = a 0,
-             metadata = []
+             metadata = [] 
            },
            "urem i32 %0, %0"),
           ("srem",
            SRem {
              operand0 = a 0,
              operand1 = a 0,
-             metadata = []
+             metadata = [] 
            },
            "srem i32 %0, %0"),
           ("frem",
@@ -204,7 +197,7 @@ tests = testGroup "Instructions" [
              fastMathFlags = noFastMathFlags,
              operand0 = a 1,
              operand1 = a 1,
-             metadata = []
+             metadata = [] 
            },
            "frem float %1, %1"),
           ("frem fast",
@@ -220,7 +213,7 @@ tests = testGroup "Instructions" [
              },
              operand0 = a 1,
              operand1 = a 1,
-             metadata = []
+             metadata = [] 
            },
            "frem fast float %1, %1"),
           ("shl",
@@ -229,7 +222,7 @@ tests = testGroup "Instructions" [
              nuw = False,
              operand0 = a 0,
              operand1 = a 0,
-             metadata = []
+             metadata = [] 
            },
            "shl i32 %0, %0"),
           ("ashr",
@@ -237,7 +230,7 @@ tests = testGroup "Instructions" [
              exact = False,
              operand0 = a 0,
              operand1 = a 0,
-             metadata = []
+             metadata = [] 
            },
            "ashr i32 %0, %0"),
           ("lshr",
@@ -245,44 +238,44 @@ tests = testGroup "Instructions" [
              exact = False,
              operand0 = a 0,
              operand1 = a 0,
-             metadata = []
+             metadata = [] 
            },
            "lshr i32 %0, %0"),
           ("and",
            And {
              operand0 = a 0,
              operand1 = a 0,
-             metadata = []
+             metadata = [] 
            },
            "and i32 %0, %0"),
           ("or",
            Or {
              operand0 = a 0,
              operand1 = a 0,
-             metadata = []
+             metadata = [] 
            },
            "or i32 %0, %0"),
           ("xor",
            Xor {
              operand0 = a 0,
              operand1 = a 0,
-             metadata = []
+             metadata = [] 
            },
            "xor i32 %0, %0"),
           ("alloca",
            Alloca {
              allocatedType = i32,
              numElements = Nothing,
-             alignment = 4,
-             metadata = []
+             alignment = 0,
+             metadata = [] 
            },
-           "alloca i32, align 4"),
+           "alloca i32"),
           ("alloca tricky",
            Alloca {
              allocatedType = IntegerType 7,
              numElements = Just (ConstantOperand (C.Int 32 2)),
              alignment = 128,
-             metadata = []
+             metadata = [] 
            },
            "alloca i7, i32 2, align 128"),
           ("load",
@@ -290,26 +283,26 @@ tests = testGroup "Instructions" [
              volatile = False,
              address = a 2,
              maybeAtomicity = Nothing,
-             alignment = 4,
-             metadata = []
+             alignment = 0,
+             metadata = [] 
            },
-           "load i32, i32* %2, align 4"),
+           "load i32, i32* %2"),
           ("volatile",
            Load {
              volatile = True,
              address = a 2,
              maybeAtomicity = Nothing,
-             alignment = 4,
-             metadata = []
+             alignment = 0,
+             metadata = [] 
            },
-           "load volatile i32, i32* %2, align 4"),
+           "load volatile i32, i32* %2"),
           ("acquire",
            Load {
              volatile = False,
              address = a 2,
              maybeAtomicity = Just (System, Acquire),
              alignment = 1,
-             metadata = []
+             metadata = [] 
            },
            "load atomic i32, i32* %2 acquire, align 1"),
           ("singlethread",
@@ -318,7 +311,7 @@ tests = testGroup "Instructions" [
              address = a 2,
              maybeAtomicity = Just (SingleThread, Monotonic),
              alignment = 1,
-             metadata = []
+             metadata = [] 
            },
            "load atomic i32, i32* %2 syncscope(\"singlethread\") monotonic, align 1"),
           ("GEP",
@@ -326,7 +319,7 @@ tests = testGroup "Instructions" [
              inBounds = False,
              address = a 2,
              indices = [ a 0 ],
-             metadata = []
+             metadata = [] 
            },
            "getelementptr i32, i32* %2, i32 %0"),
           ("inBounds",
@@ -334,7 +327,7 @@ tests = testGroup "Instructions" [
              inBounds = True,
              address = a 2,
              indices = [ a 0 ],
-             metadata = []
+             metadata = [] 
            },
            "getelementptr inbounds i32, i32* %2, i32 %0"),
           ("cmpxchg",
@@ -345,7 +338,7 @@ tests = testGroup "Instructions" [
              replacement = a 0,
              atomicity = (System, Monotonic),
              failureMemoryOrdering = Monotonic,
-             metadata = []
+             metadata = [] 
            },
            "cmpxchg i32* %2, i32 %0, i32 %0 monotonic monotonic"),
           ("atomicrmw",
@@ -363,91 +356,91 @@ tests = testGroup "Instructions" [
            Trunc {
              operand0 = a 0,
              type' = i16,
-             metadata = []
+             metadata = [] 
            },
            "trunc i32 %0 to i16"),
           ("zext",
            ZExt {
              operand0 = a 0,
              type' = i64,
-             metadata = []
+             metadata = [] 
            },
            "zext i32 %0 to i64"),
           ("sext",
            SExt {
              operand0 = a 0,
              type' = i64,
-             metadata = []
+             metadata = [] 
            },
            "sext i32 %0 to i64"),
           ("fptoui",
            FPToUI {
              operand0 = a 1,
              type' = i64,
-             metadata = []
+             metadata = [] 
            },
            "fptoui float %1 to i64"),
           ("fptosi",
            FPToSI {
              operand0 = a 1,
              type' = i64,
-             metadata = []
+             metadata = [] 
            },
            "fptosi float %1 to i64"),
           ("uitofp",
            UIToFP {
              operand0 = a 0,
              type' = float,
-             metadata = []
+             metadata = [] 
            },
            "uitofp i32 %0 to float"),
           ("sitofp",
            SIToFP {
              operand0 = a 0,
              type' = float,
-             metadata = []
+             metadata = [] 
            },
            "sitofp i32 %0 to float"),
           ("fptrunc",
            FPTrunc {
              operand0 = a 1,
              type' = half,
-             metadata = []
+             metadata = [] 
            },
            "fptrunc float %1 to half"),
           ("fpext",
            FPExt {
              operand0 = a 1,
              type' = double,
-             metadata = []
+             metadata = [] 
            },
            "fpext float %1 to double"),
           ("ptrtoint",
            PtrToInt {
              operand0 = a 2,
              type' = i32,
-             metadata = []
+             metadata = [] 
            },
            "ptrtoint i32* %2 to i32"),
           ("inttoptr",
            IntToPtr {
              operand0 = a 0,
              type' = ptr i32,
-             metadata = []
+             metadata = [] 
            },
            "inttoptr i32 %0 to i32*"),
           ("bitcast",
            BitCast {
              operand0 = a 0,
              type' = float,
-             metadata = []
+             metadata = [] 
            },
            "bitcast i32 %0 to float"),
           ("addrspacecast",
            AddrSpaceCast {
              operand0 = a 2,
              type' = PointerType i32 (AddrSpace 2),
-             metadata = []
+             metadata = [] 
            },
            "addrspacecast i32* %2 to i32 addrspace(2)*"),
           ("select",
@@ -484,7 +477,7 @@ tests = testGroup "Instructions" [
            ShuffleVector {
              operand0 = a 5,
              operand1 = a 5,
-             mask = [0..1],
+             mask = C.Vector [ C.Int 32 p | p <- [0..1] ],
              metadata = []
            },
            "shufflevector <2 x i32> %5, <2 x i32> %5, <2 x i32> <i32 0, i32 1>"),
@@ -572,10 +565,10 @@ tests = testGroup "Instructions" [
             address = a 2,
             value = a 0,
             maybeAtomicity = Nothing,
-            alignment = 4,
+            alignment = 0,
             metadata = []
           },
-          "store i32 %0, i32* %2, align 4"),
+          "store i32 %0, i32* %2"),
          ("fence",
           Do $ Fence {
             atomicity = (System, Acquire),
@@ -640,7 +633,7 @@ tests = testGroup "Instructions" [
                \}\n"
     s <- withContext $ \context -> withModuleFromAST context mAST moduleLLVMAssembly
     s @?= mStr,
-
+    
   testGroup "terminators" [
     testCase name $ strCheck mAST mStr
     | (name, mAST, mStr) <- [
@@ -770,8 +763,8 @@ tests = testGroup "Instructions" [
                        volatile = False,
                        address = ConstantOperand (C.GlobalReference (ptr (ptr i8)) (UnName 0)),
                        maybeAtomicity = Nothing,
-                       alignment = 8,
-                       metadata = []
+                       alignment = 0,
+                       metadata = [] 
                      }
             ] (
               Do $ IndirectBr {
@@ -786,13 +779,14 @@ tests = testGroup "Instructions" [
            ]
          }
         ],
+--       \  indirectbr i8* null, [label %foo]\n\
        "; ModuleID = '<string>'\n\
        \source_filename = \"<string>\"\n\
        \\n\
        \@0 = global i8* blockaddress(@foo, %2)\n\
        \\n\
        \define void @foo() {\n\
-       \  %1 = load i8*, i8** @0, align 8\n\
+       \  %1 = load i8*, i8** @0\n\
        \  indirectbr i8* %1, [label %2]\n\
        \\n\
        \2:                                                ; preds = %0\n\
@@ -850,7 +844,7 @@ tests = testGroup "Instructions" [
        "; ModuleID = '<string>'\n\
        \source_filename = \"<string>\"\n\
        \\n\
-       \define void @0(i32 %0, i16 %1) personality void (i32, i16)* @0 {\n\
+       \define void @0(i32, i16) personality void (i32, i16)* @0 {\n\
        \  invoke void @0(i32 4, i16 8)\n\
        \          to label %foo unwind label %bar\n\
        \\n\

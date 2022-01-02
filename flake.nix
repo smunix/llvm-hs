@@ -10,7 +10,7 @@
       flake = false;
     };
     lhp = {
-      url = "github:smunix/llvm-hs-pretty/pre.llvm-12";
+      url = "github:smunix/llvm-hs-pretty/fix.luctielen.pretty";
       flake = false;
     };
   };
@@ -36,8 +36,9 @@
               llvm-hs = addBuildDepends (overrideCabal (callCabal2nix "llvm-hs"
                 (with nf.lib; filter { root = ./llvm-hs; }) {
                   inherit llvm-hs-pure;
+                  llvm-config = llvmPackages_9.llvm;
                 }) (o: { version = "${o.version}-${version ghc}"; }))
-                [ llvmPackages_12.llvm ];
+                [ llvmPackages_9.llvm ];
               llvm-hs-pretty = dontCheck (overrideCabal (addBuildTools
                 (callCabal2nix "llvm-hs-pretty" "${lhp}" {
                   inherit llvm-hs llvm-hs-pure;
@@ -76,7 +77,7 @@
                   cabal-install
                   ghc
                   haskell-language-server
-                  llvmPackages_12.llvm
+                  llvmPackages_9.llvm
                 ];
               };
           };

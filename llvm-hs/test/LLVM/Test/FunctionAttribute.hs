@@ -26,47 +26,47 @@ import qualified Data.ByteString.Short                    as B
 
 instance Arbitrary FunctionAttribute where
   arbitrary = oneof
-    [ return AlwaysInline
-    , return ArgMemOnly
-    , return Builtin
-    , return Cold
-    , return Convergent
-    , return InaccessibleMemOnly
-    , return InaccessibleMemOrArgMemOnly
-    , return InlineHint
-    , return JumpTable
-    , return MinimizeSize
-    , return Naked
-    , return NoBuiltin
-    , return NoDuplicate
-    , return NoFree
-    , return NoImplicitFloat
-    , return NoInline
-    , return NonLazyBind
-    , return NoRecurse
-    , return NoRedZone
-    , return NoReturn
+    [ return NoReturn
     , return NoUnwind
-    , return OptimizeForSize
-    , return OptimizeNone
     , return ReadNone
     , return ReadOnly
-    , return ReturnsTwice
-    , return SafeStack
-    , return SanitizeAddress
-    , return SanitizeHWAddress
-    , return SanitizeMemory
-    , return SanitizeThread
-    , return Speculatable
+    , return NoInline
+    , return NoRecurse
+    , return AlwaysInline
+    , return MinimizeSize
+    , return OptimizeForSize
+    , return OptimizeNone
     , return StackProtect
     , return StackProtectReq
     , return StackProtectStrong
     , return StrictFP
-    , return UWTable
-    , return WriteOnly
+    , return NoRedZone
+    , return NoImplicitFloat
+    , return Naked
+    , return InlineHint
     , StackAlignment <$> elements (map (2^) [0..8 :: Int])
+    , return ReturnsTwice
+    , return UWTable
+    , return NonLazyBind
+    , return Builtin
+    , return NoBuiltin
+    , return Cold
+    , return JumpTable
+    , return NoDuplicate
+    , return NoFree
+    , return SanitizeAddress
+    , return SanitizeHWAddress
+    , return SanitizeThread
+    , return SanitizeMemory
     , StringAttribute <$> (B.pack <$> arbitrary) <*> (B.pack <$> arbitrary)
     , suchThat (AllocSize <$> arbitrary <*> arbitrary) (/= AllocSize 0 (Just 0))
+    , return WriteOnly
+    , return ArgMemOnly
+    , return Convergent
+    , return InaccessibleMemOnly
+    , return InaccessibleMemOrArgMemOnly
+    , return SafeStack
+    , return Speculatable
     ]
 
   shrink = \case

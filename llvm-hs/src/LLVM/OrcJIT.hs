@@ -1,44 +1,68 @@
 module LLVM.OrcJIT (
-    -- * ExecutionSession
-    ExecutionSession,
-    createExecutionSession,
-    disposeExecutionSession,
-    withExecutionSession,
-    -- * JITDylib
-    JITDylib(..),
-    createJITDylib,
-    -- ** Symbol search generators
-    addDynamicLibrarySearchGeneratorForCurrentProcess,
-    addDynamicLibrarySearchGenerator,
-    -- ** Symbol lookups
-    lookupSymbol,
+    -- * CompileLayer
+    CompileLayer,
+    -- ** Add/remove modules
+    ModuleKey,
+    addModule,
+    removeModule,
+    withModule,
+    -- ** Search for symbols
     JITSymbol(..),
     JITSymbolError(..),
     JITSymbolFlags(..),
     defaultJITSymbolFlags,
-    -- * ThreadSafeContext
-    ThreadSafeContext,
-    -- ** Lifetime management
-    withThreadSafeContext,
-    createThreadSafeContext,
-    disposeThreadSafeContext,
-    -- * ThreadSafeModule
-    ThreadSafeModule(..),
-    -- ** Lifetime management
-    withClonedThreadSafeModule,
-    cloneAsThreadSafeModule,
-    disposeThreadSafeModule,
-    -- * Object layers
-    ObjectLayer,
-    -- ** RTDyldObjectLinkingLayer
-    RTDyldObjectLinkingLayer,
-    createRTDyldObjectLinkingLayer,
-    -- * IR layers
-    IRLayer,
-    addModule,
+    SymbolResolver(..),
+    withSymbolResolver,
+    -- ** Symbol mangling
+    MangledSymbol,
+    mangleSymbol,
+    -- ** ExecutionSession
+    ExecutionSession,
+    createExecutionSession,
+    disposeExecutionSession,
+    withExecutionSession,
+    allocateModuleKey,
+    releaseModuleKey,
+    withModuleKey,
     -- ** IRCompileLayer
     IRCompileLayer,
-    createIRCompileLayer,
+    newIRCompileLayer,
+    withIRCompileLayer,
+    -- ** CompileOnDemandLayer
+    CompileOnDemandLayer,
+    newCompileOnDemandLayer,
+    withCompileOnDemandLayer,
+    -- ** IRTRansformLayer
+    IRTransformLayer,
+    newIRTransformLayer,
+    withIRTransformLayer,
+    -- ** Dispose of compile layers
+    disposeCompileLayer,
+    -- * LinkingLayer
+    LinkingLayer,
+    -- ** Create linking layers
+    ObjectLinkingLayer,
+    newObjectLinkingLayer,
+    withObjectLinkingLayer,
+    -- ** Dispose of linking layers
+    disposeLinkingLayer,
+    -- ** Add an object file
+    addObjectFile,
+    -- * JITCompileCallbackManager
+    JITCompileCallbackManager,
+    newJITCompileCallbackManager,
+    disposeJITCompileCallbackManager,
+    withJITCompileCallbackManager,
+    -- * IndirectStubsManagerBuilder
+    IndirectStubsManagerBuilder,
+    newIndirectStubsManagerBuilder,
+    disposeIndirectStubsManagerBuilder,
+    withIndirectStubsManagerBuilder,
   ) where
 
 import LLVM.Internal.OrcJIT
+import LLVM.Internal.OrcJIT.CompileLayer
+import LLVM.Internal.OrcJIT.LinkingLayer
+import LLVM.Internal.OrcJIT.CompileOnDemandLayer
+import LLVM.Internal.OrcJIT.IRCompileLayer
+import LLVM.Internal.OrcJIT.IRTransformLayer
