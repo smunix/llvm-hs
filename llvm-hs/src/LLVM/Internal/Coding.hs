@@ -20,15 +20,14 @@ import Foreign.Storable (Storable)
 import qualified Foreign.Storable
 import qualified Foreign.Marshal.Alloc
 import qualified Foreign.Marshal.Array
-import GHC.Stack
 
 import qualified LLVM.Internal.FFI.LLVMCTypes as FFI
 
 class EncodeM e h c where
-  encodeM :: HasCallStack => h -> e c
+  encodeM :: h -> e c
 
 class DecodeM d h c where
-  decodeM :: HasCallStack => c -> d h
+  decodeM :: c -> d h
 
 genCodingInstance :: (Data c, Data h) => TypeQ -> Name -> [(c, h)] -> Q [Dec]
 genCodingInstance ht ctn chs = do

@@ -34,7 +34,7 @@ import Data.Bifunctor
 import Data.ByteString.Short as BS
 import Data.Char
 import Data.Data
-import Data.Foldable
+import Data.Foldable as Foldable
 import Data.Map.Lazy (Map)
 import qualified Data.Map.Lazy as Map
 import Data.String
@@ -47,7 +47,7 @@ import LLVM.AST.Linkage
 import LLVM.AST.Type (ptr)
 import qualified LLVM.AST.Constant as C
 
-import LLVM.IRBuilder.Internal.SnocList
+import LLVM.IRBuilder.Internal.SnocList as LLVM
 import LLVM.IRBuilder.Monad
 
 newtype ModuleBuilderT m a = ModuleBuilderT { unModuleBuilderT :: StateT ModuleBuilderState m a }
@@ -105,7 +105,7 @@ execModuleBuilderT :: Monad m => ModuleBuilderState -> ModuleBuilderT m a -> m [
 execModuleBuilderT s m = snd <$> runModuleBuilderT s m
 
 emitDefn :: MonadModuleBuilder m => Definition -> m ()
-emitDefn def = liftModuleState $ modify $ \s -> s { builderDefs = builderDefs s `snoc` def }
+emitDefn def = liftModuleState $ modify $ \s -> s { builderDefs = builderDefs s `LLVM.snoc` def }
 
 -- | A parameter name suggestion
 data ParameterName
@@ -116,7 +116,7 @@ data ParameterName
 -- | Using 'fromString` on non-ASCII strings will throw an error.
 instance IsString ParameterName where
   fromString s
-    | all isAscii s = ParameterName (fromString s)
+    | Foldable.all isAscii s = ParameterName (fromString s)
     | otherwise =
       error ("Only ASCII strings are automatically converted to LLVM parameter names. "
       <> "Other strings need to be encoded to a `ShortByteString` using an arbitrary encoding.")
